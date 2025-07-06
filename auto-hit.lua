@@ -1,35 +1,57 @@
--- auto-hit.lua
-local RunService = game:GetService('RunService')
-
-local AutoHit = {}
-AutoHit.enabled = true
-AutoHit.connection = nil
-
--- Function to disable auto hit
-function AutoHit:Disable()
-    self.enabled = false
-    if self.connection then
-        self.connection:Disconnect()
-        self.connection = nil
-    end
-end
-
--- Start auto hit
-AutoHit.connection = RunService.Heartbeat:Connect(function()
-    if not AutoHit.enabled then return end
+-- Auto Hit Module
+return function(services)
+    local MainTab = services.MainTab
+    local RunService = services.RunService
     
-    pcall(function()
-        local args = {
-            [1] = 'UsingMoveCustom',
-            [2] = workspace:WaitForChild('Live', 9e9):WaitForChild('uhonestlydontxare', 9e9):WaitForChild('Bottle', 9e9),
-            [4] = {
-                ['Clicked'] = true,
-            },
-        }
+    -- Create section
+    local Section = MainTab:CreateSection('Auto Hit')
+    
+    local autoHitEnabled = false
+    local autoHitConnection
 
-        game:GetService('ReplicatedStorage'):WaitForChild('Remotes', 9e9):WaitForChild('UsedTool', 9e9):FireServer(unpack(args))
-    end)
-end)
+    MainTab:CreateToggle({
+        Name = 'Auto Hit',
+        CurrentValue = false,
+        Flag = 'AutoHitToggle',
+        Callback = function(Value)
+            autoHitEnabled = Value
 
--- Store in global for access
-_G.AutoHit = AutoHit
+            if autoHitEnabled then
+                autoHitConnection = RunService.Heartbeat:Connect(function()
+                    pcall(function()
+                        local args = {
+                            [1] = 'UsingMoveCustom',
+                            [2] = workspace
+                                :WaitForChild('Live', 9e9)
+                                :WaitForChild('uhonestlydontxare', 9e9)
+                                :WaitForChild('Bottle', 9e9),
+                            [4] = {
+                                ['Clicked'] = true,
+                            },
+                        }
+
+                        game
+                            :GetService('ReplicatedStorage')
+                            :WaitForChild('Remotes', 9e9)
+                            :WaitForChild('UsedTool', 9e9)
+                            :FireServer(unpack(args))
+                    end)
+                end)
+            else
+                if autoHitConnection then
+                    autoHitConnection:Disconnect()
+                end
+            end
+        end,
+    })
+    
+    return {
+        name = "Auto Hit",
+        version = "1.0.0",
+        cleanup = function()
+            if autoHitConnection then
+                autoHitConnection:Disconnect()
+            end
+        end
+    }
+end
