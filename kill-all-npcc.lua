@@ -9,10 +9,10 @@ return function(params)
     local MainTab = params.MainTab
 
     -- Variables
-    local Camera = Workspace.CurrentCamera
     local npcESPEnabled = false
     local npcHitboxEnabled = false
     local npcTeleportEnabled = false
+    local gunModsEnabled = false
     local teleportDistance = 10
 
     -- NPC Functions
@@ -91,14 +91,14 @@ return function(params)
     -- Initial NPC scan
     scanForNPCs()
 
-    -- Function to teleport NPCs to one position in front of player
+    -- Function to teleport NPCs to one position in front of character
     local function teleportNPCsToSinglePoint()
         local character = LocalPlayer.Character
         local fixedPosition
         if character and character:FindFirstChild("HumanoidRootPart") then
-            local cameraDirection = Camera.CFrame.LookVector
-            local cameraPosition = Camera.CFrame.Position
-            fixedPosition = cameraPosition + cameraDirection * teleportDistance
+            local characterDirection = character.HumanoidRootPart.CFrame.LookVector
+            local characterPosition = character.HumanoidRootPart.Position
+            fixedPosition = characterPosition + characterDirection * teleportDistance
         else
             fixedPosition = Vector3.new(0, 5, 0)
         end
@@ -122,19 +122,36 @@ return function(params)
     end
 
     -- Gun Mods for MP5
-    local MP5 = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:FindFirstChild("Guns") and ReplicatedStorage.Weapons.Guns:FindFirstChild("MP5")
-    if MP5 then
-        if MP5:FindFirstChild("MaxBullets") then
-            MP5.MaxBullets.Value = math.huge
-        end
-        if MP5:FindFirstChild("Spread") then
-            MP5.Spread.Value = 0
-        end
-        if MP5:FindFirstChild("BulletsPerFire") then
-            MP5.BulletsPerFire.Value = 5
-        end
-        if MP5:FindFirstChild("FireRateCD") then
-            MP5.FireRateCD.Value = 0
+    local function applyGunMods(value)
+        local MP5 = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:FindFirstChild("Guns") and ReplicatedStorage.Weapons.Guns:FindFirstChild("MP5")
+        if MP5 then
+            if value then
+                if MP5:FindFirstChild("MaxBullets") then
+                    MP5.MaxBullets.Value = math.huge
+                end
+                if MP5:FindFirstChild("Spread") then
+                    MP5.Spread.Value = 0
+                end
+                if MP5:FindFirstChild("BulletsPerFire") then
+                    MP5.BulletsPerFire.Value = 5
+                end
+                if MP5:FindFirstChild("FireRateCD") then
+                    MP5.FireRateCD.Value = 0
+                end
+            else
+                if MP5:FindFirstChild("MaxBullets") then
+                    MP5.MaxBullets.Value = 30 -- Default value
+                end
+                if MP5:FindFirstChild("Spread") then
+                    MP5.Spread.Value = 0.1 -- Default value
+                end
+                if MP5:FindFirstChild("BulletsPerFire") then
+                    MP5.BulletsPerFire.Value = 1 -- Default value
+                end
+                if MP5:FindFirstChild("FireRateCD") then
+                    MP5.FireRateCD.Value = 0.1 -- Default value
+                end
+            end
         end
     end
 
@@ -211,6 +228,21 @@ return function(params)
             end
         end
     })
+
+    MainTab:CreateToggle({
+        Name = "MP5 Gun Mods",
+        CurrentValue = false,
+        Flag = "gunModsToggle",
+        Callback = function(value)
+            gunModsEnabled = value
+            applyGunMods(value)
+        end
+    })
+
+    -- Apply gun mods on load if toggle is enabled by default
+    if gunModsEnabled then
+        applyGunMods(true)
+    end
 
     -- Return module object with onCharacterAdded for respawn handling
     return {
