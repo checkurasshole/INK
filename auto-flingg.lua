@@ -168,7 +168,7 @@ return function(services)
                     if targetRoot then
                         print("Targeting player " .. i .. "/" .. #nearest .. ": " .. plr.Name)
                         
-                        -- Teleport to target
+                        -- Slam your HumanoidRootPart directly into theirs
                         Root.CFrame = targetRoot.CFrame
                         
                         -- Apply fling velocity
