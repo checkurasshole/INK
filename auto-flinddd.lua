@@ -12,8 +12,9 @@ return function(services)
     local excludedPlayers = {}
     local targetCount = 6
     local isFlingRunning = false
+    local walkflinging = false
     local flingConnection = nil
-    local bodyAngularVelocity = nil
+    local humanoidDiedConnection = nil
     
     -- Get all players for dropdown
     local function getAllPlayers()
@@ -81,84 +82,66 @@ return function(services)
         end
     end
     
-    -- Setup fling physics (silent version - no spinning for you)
-    local function setupFlingPhysics()
+    -- Start walkfling
+    local function startWalkfling()
         local Character = LocalPlayer.Character
-        if not Character or not Character:FindFirstChild("HumanoidRootPart") then
-            return false
+        if not Character then return false end
+        
+        local humanoid = Character:FindFirstChildWhichIsA("Humanoid")
+        if humanoid then
+            humanoidDiedConnection = humanoid.Died:Connect(function()
+                stopWalkfling()
+            end)
         end
         
-        -- Enable noclip first
         enableNoclip()
+        walkflinging = true
         
-        -- Apply custom physical properties to all parts (but no spinning)
-        for _, child in pairs(Character:GetDescendants()) do
-            if child:IsA("BasePart") then
-                child.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5)
-                child.CanCollide = false
-                child.Massless = true
-                child.Velocity = Vector3.new(0, 0, 0)
+        flingConnection = RunService.Heartbeat:Connect(function()
+            if not walkflinging then return end
+            
+            local character = LocalPlayer.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if not (character and character.Parent and root and root.Parent) then
+                return
             end
-        end
-        
-        return true
-    end
-    
-    -- Clean up fling physics
-    local function cleanupFlingPhysics()
-        local Character = LocalPlayer.Character
-        if Character then            
-            -- Reset physical properties
-            for _, child in pairs(Character:GetDescendants()) do
-                if child:IsA("BasePart") then
-                    child.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5)
-                    child.CanCollide = true
-                    child.Massless = false
-                end
+            
+            local vel = root.Velocity
+            local movel = 0.1
+            
+            -- Apply fling velocity
+            root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+            
+            RunService.RenderStepped:Wait()
+            if character and character.Parent and root and root.Parent then
+                root.Velocity = vel
             end
-        end
-        
-        -- Disable noclip
-        disableNoclip()
-        
-        bodyAngularVelocity = nil
-        if flingConnection then
-            flingConnection:Disconnect()
-            flingConnection = nil
-        end
-    end
-    
-    -- Silent fling function - applies force to target without spinning yourself
-    local function applyFlingForce(targetPlayer)
-        local Character = LocalPlayer.Character
-        local targetCharacter = targetPlayer.Character
-        
-        if not Character or not targetCharacter then return false end
-        
-        local Root = Character:FindFirstChild("HumanoidRootPart")
-        local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
-        
-        if not Root or not targetRoot then return false end
-        
-        -- Create a temporary BodyVelocity for the target
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bodyVelocity.Velocity = Vector3.new(
-            math.random(-100, 100), 
-            math.random(50, 150), 
-            math.random(-100, 100)
-        )
-        bodyVelocity.Parent = targetRoot
-        
-        -- Remove the force after a short time
-        task.spawn(function()
-            task.wait(0.1)
-            if bodyVelocity and bodyVelocity.Parent then
-                bodyVelocity:Destroy()
+            
+            RunService.Stepped:Wait()
+            if character and character.Parent and root and root.Parent then
+                root.Velocity = vel + Vector3.new(0, movel, 0)
+                movel = movel * -1
             end
         end)
         
         return true
+    end
+    
+    -- Stop walkfling
+    local function stopWalkfling()
+        walkflinging = false
+        disableNoclip()
+        
+        if flingConnection then
+            flingConnection:Disconnect()
+            flingConnection = nil
+        end
+        
+        if humanoidDiedConnection then
+            humanoidDiedConnection:Disconnect()
+            humanoidDiedConnection = nil
+        end
     end
     
     -- Exclude List Dropdown
@@ -232,11 +215,11 @@ return function(services)
             end
             
             isFlingRunning = true
-            print("Starting auto fling targeting " .. targetCount .. " players...")
+            print("Starting silent auto fling targeting " .. targetCount .. " players...")
             
-            -- Setup fling physics first (no spinning for you)
-            if not setupFlingPhysics() then
-                print("Failed to setup fling physics!")
+            -- Start walkfling
+            if not startWalkfling() then
+                print("Failed to start walkfling!")
                 isFlingRunning = false
                 return
             end
@@ -250,7 +233,7 @@ return function(services)
                 
                 if #nearest == 0 then
                     print("No valid targets found!")
-                    cleanupFlingPhysics()
+                    stopWalkfling()
                     isFlingRunning = false
                     return
                 end
@@ -265,32 +248,29 @@ return function(services)
                     
                     local targetRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
                     if targetRoot then
-                        print("Targeting player " .. i .. "/" .. #nearest .. ": " .. plr.Name)
+                        print("Silently targeting player " .. i .. "/" .. #nearest .. ": " .. plr.Name)
                         
                         -- Teleport directly into the target (noclip allows this)
                         Root.CFrame = targetRoot.CFrame
                         
-                        -- Apply silent fling force to the target
-                        applyFlingForce(plr)
-                        
-                        -- Wait briefly before next target
-                        task.wait(0.3)
+                        -- Wait for fling effect (shorter time since walkfling is more efficient)
+                        task.wait(1.0)
                     else
                         print("Skipping " .. plr.Name .. " - no valid character")
                     end
                 end
                 
-                -- Clean up and return to original position
-                cleanupFlingPhysics()
+                -- Stop walkfling and return to original position
+                stopWalkfling()
                 
                 if Character and Character:FindFirstChild("HumanoidRootPart") then
-                    task.wait(0.2) -- Wait for physics to settle
+                    task.wait(0.3) -- Wait for physics to settle
                     Character.HumanoidRootPart.CFrame = originalPosition
                     print("Returned to original position")
                 end
                 
                 isFlingRunning = false
-                print("Auto fling completed!")
+                print("Silent auto fling completed!")
             end)
         end,
     })
@@ -301,7 +281,7 @@ return function(services)
         Callback = function()
             if isFlingRunning then
                 isFlingRunning = false
-                cleanupFlingPhysics()
+                stopWalkfling()
                 print("Auto fling stopped")
             else
                 print("Auto fling is not running")
@@ -315,8 +295,8 @@ return function(services)
         Callback = function()
             local Character = LocalPlayer.Character
             if Character and Character:FindFirstChild("HumanoidRootPart") then
-                -- Clean up fling physics first
-                cleanupFlingPhysics()
+                -- Stop walkfling first
+                stopWalkfling()
                 isFlingRunning = false
                 
                 -- Teleport to a safe position (high up)
@@ -334,7 +314,7 @@ return function(services)
     task.spawn(function()
         while true do
             if isFlingRunning then
-                StatusLabel:Set("Status: Auto Fling Running...")
+                StatusLabel:Set("Status: Silent Fling Running...")
             else
                 StatusLabel:Set("Status: Ready")
             end
@@ -347,7 +327,7 @@ return function(services)
         onCharacterAdded = function(character)
             -- Stop auto fling if character respawns
             if isFlingRunning then
-                cleanupFlingPhysics()
+                stopWalkfling()
                 isFlingRunning = false
                 print("Auto fling stopped due to character respawn")
             end
