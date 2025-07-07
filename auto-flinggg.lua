@@ -164,7 +164,7 @@ return function(services)
                         break
                     end
                     
-                    local targetRoot = getRoot(plr.Character)
+                    local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
                     if targetRoot then
                         print("Targeting player " .. i .. "/" .. #nearest .. ": " .. plr.Name)
                         
