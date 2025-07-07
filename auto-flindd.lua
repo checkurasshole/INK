@@ -81,19 +81,17 @@ return function(services)
         end
     end
     
-    -- Setup fling physics
+    -- Setup fling physics (silent version - no spinning for you)
     local function setupFlingPhysics()
         local Character = LocalPlayer.Character
         if not Character or not Character:FindFirstChild("HumanoidRootPart") then
             return false
         end
         
-        local Root = Character.HumanoidRootPart
-        
         -- Enable noclip first
         enableNoclip()
         
-        -- Apply custom physical properties to all parts
+        -- Apply custom physical properties to all parts (but no spinning)
         for _, child in pairs(Character:GetDescendants()) do
             if child:IsA("BasePart") then
                 child.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5)
@@ -103,31 +101,13 @@ return function(services)
             end
         end
         
-        -- Create BodyAngularVelocity for spinning
-        bodyAngularVelocity = Instance.new("BodyAngularVelocity")
-        bodyAngularVelocity.Name = "FlingVelocity"
-        bodyAngularVelocity.Parent = Root
-        bodyAngularVelocity.AngularVelocity = Vector3.new(0, 99999, 0)
-        bodyAngularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
-        bodyAngularVelocity.P = math.huge
-        
         return true
     end
     
     -- Clean up fling physics
     local function cleanupFlingPhysics()
         local Character = LocalPlayer.Character
-        if Character then
-            local Root = Character:FindFirstChild("HumanoidRootPart")
-            if Root then
-                -- Remove BodyAngularVelocity
-                for _, child in pairs(Root:GetChildren()) do
-                    if child:IsA("BodyAngularVelocity") then
-                        child:Destroy()
-                    end
-                end
-            end
-            
+        if Character then            
             -- Reset physical properties
             for _, child in pairs(Character:GetDescendants()) do
                 if child:IsA("BasePart") then
@@ -148,22 +128,37 @@ return function(services)
         end
     end
     
-    -- Fling loop function
-    local function startFlingLoop()
-        if not bodyAngularVelocity then return end
+    -- Silent fling function - applies force to target without spinning yourself
+    local function applyFlingForce(targetPlayer)
+        local Character = LocalPlayer.Character
+        local targetCharacter = targetPlayer.Character
         
-        flingConnection = RunService.Heartbeat:Connect(function()
-            if not isFlingRunning or not bodyAngularVelocity or not bodyAngularVelocity.Parent then
-                return
-            end
-            
-            -- Alternate between spinning and stopping for maximum fling effect
-            if tick() % 0.3 < 0.2 then
-                bodyAngularVelocity.AngularVelocity = Vector3.new(0, 99999, 0)
-            else
-                bodyAngularVelocity.AngularVelocity = Vector3.new(0, 0, 0)
+        if not Character or not targetCharacter then return false end
+        
+        local Root = Character:FindFirstChild("HumanoidRootPart")
+        local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+        
+        if not Root or not targetRoot then return false end
+        
+        -- Create a temporary BodyVelocity for the target
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Velocity = Vector3.new(
+            math.random(-100, 100), 
+            math.random(50, 150), 
+            math.random(-100, 100)
+        )
+        bodyVelocity.Parent = targetRoot
+        
+        -- Remove the force after a short time
+        task.spawn(function()
+            task.wait(0.1)
+            if bodyVelocity and bodyVelocity.Parent then
+                bodyVelocity:Destroy()
             end
         end)
+        
+        return true
     end
     
     -- Exclude List Dropdown
@@ -239,15 +234,12 @@ return function(services)
             isFlingRunning = true
             print("Starting auto fling targeting " .. targetCount .. " players...")
             
-            -- Setup fling physics first
+            -- Setup fling physics first (no spinning for you)
             if not setupFlingPhysics() then
                 print("Failed to setup fling physics!")
                 isFlingRunning = false
                 return
             end
-            
-            -- Start the fling loop
-            startFlingLoop()
             
             task.spawn(function()
                 local Root = Character.HumanoidRootPart
@@ -278,8 +270,11 @@ return function(services)
                         -- Teleport directly into the target (noclip allows this)
                         Root.CFrame = targetRoot.CFrame
                         
-                        -- Wait for fling effect
-                        task.wait(1.5)
+                        -- Apply silent fling force to the target
+                        applyFlingForce(plr)
+                        
+                        -- Wait briefly before next target
+                        task.wait(0.3)
                     else
                         print("Skipping " .. plr.Name .. " - no valid character")
                     end
@@ -289,7 +284,7 @@ return function(services)
                 cleanupFlingPhysics()
                 
                 if Character and Character:FindFirstChild("HumanoidRootPart") then
-                    task.wait(0.5) -- Wait for physics to settle
+                    task.wait(0.2) -- Wait for physics to settle
                     Character.HumanoidRootPart.CFrame = originalPosition
                     print("Returned to original position")
                 end
