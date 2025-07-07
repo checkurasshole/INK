@@ -12,13 +12,8 @@ return function(services)
     local excludedPlayers = {}
     local targetCount = 6
     local isFlingRunning = false
-    
-    -- Helper function to get root part
-    local function getRoot(character)
-        return character:FindFirstChild('HumanoidRootPart')
-            or character:FindFirstChild('Torso')
-            or character:FindFirstChild('UpperTorso')
-    end
+    local flingConnection = nil
+    local bodyAngularVelocity = nil
     
     -- Get all players for dropdown
     local function getAllPlayers()
@@ -34,21 +29,18 @@ return function(services)
     -- Get nearest players excluding those in exclude list
     local function getNearestPlayers(count)
         local Character = LocalPlayer.Character
-        if not Character then
+        if not Character or not Character:FindFirstChild("HumanoidRootPart") then
             return {}
         end
         
-        local Root = getRoot(Character)
-        if not Root then
-            return {}
-        end
-        
+        local Root = Character.HumanoidRootPart
         local list = {}
 
         for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                local theirRoot = getRoot(plr.Character)
-                if theirRoot and not excludedPlayers[plr.Name] then
+            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                -- Check if player is not in exclude list
+                if not excludedPlayers[plr.Name] then
+                    local theirRoot = plr.Character.HumanoidRootPart
                     local dist = (Root.Position - theirRoot.Position).Magnitude
                     table.insert(list, {plr = plr, dist = dist})
                 end
@@ -63,6 +55,85 @@ return function(services)
         end
 
         return result
+    end
+    
+    -- Setup fling physics
+    local function setupFlingPhysics()
+        local Character = LocalPlayer.Character
+        if not Character or not Character:FindFirstChild("HumanoidRootPart") then
+            return false
+        end
+        
+        local Root = Character.HumanoidRootPart
+        
+        -- Apply custom physical properties to all parts
+        for _, child in pairs(Character:GetDescendants()) do
+            if child:IsA("BasePart") then
+                child.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5)
+                child.CanCollide = false
+                child.Massless = true
+                child.Velocity = Vector3.new(0, 0, 0)
+            end
+        end
+        
+        -- Create BodyAngularVelocity for spinning
+        bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+        bodyAngularVelocity.Name = "FlingVelocity"
+        bodyAngularVelocity.Parent = Root
+        bodyAngularVelocity.AngularVelocity = Vector3.new(0, 99999, 0)
+        bodyAngularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
+        bodyAngularVelocity.P = math.huge
+        
+        return true
+    end
+    
+    -- Clean up fling physics
+    local function cleanupFlingPhysics()
+        local Character = LocalPlayer.Character
+        if Character then
+            local Root = Character:FindFirstChild("HumanoidRootPart")
+            if Root then
+                -- Remove BodyAngularVelocity
+                for _, child in pairs(Root:GetChildren()) do
+                    if child:IsA("BodyAngularVelocity") then
+                        child:Destroy()
+                    end
+                end
+            end
+            
+            -- Reset physical properties
+            for _, child in pairs(Character:GetDescendants()) do
+                if child:IsA("BasePart") then
+                    child.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5)
+                    child.CanCollide = true
+                    child.Massless = false
+                end
+            end
+        end
+        
+        bodyAngularVelocity = nil
+        if flingConnection then
+            flingConnection:Disconnect()
+            flingConnection = nil
+        end
+    end
+    
+    -- Fling loop function
+    local function startFlingLoop()
+        if not bodyAngularVelocity then return end
+        
+        flingConnection = RunService.Heartbeat:Connect(function()
+            if not isFlingRunning or not bodyAngularVelocity or not bodyAngularVelocity.Parent then
+                return
+            end
+            
+            -- Alternate between spinning and stopping for maximum fling effect
+            if tick() % 0.3 < 0.2 then
+                bodyAngularVelocity.AngularVelocity = Vector3.new(0, 99999, 0)
+            else
+                bodyAngularVelocity.AngularVelocity = Vector3.new(0, 0, 0)
+            end
+        end)
     end
     
     -- Exclude List Dropdown
@@ -130,21 +201,26 @@ return function(services)
             end
             
             local Character = LocalPlayer.Character
-            if not Character then
-                print("Character not found!")
-                return
-            end
-            
-            local Root = getRoot(Character)
-            if not Root then
-                print("HumanoidRootPart not found!")
+            if not Character or not Character:FindFirstChild("HumanoidRootPart") then
+                print("Character or HumanoidRootPart not found!")
                 return
             end
             
             isFlingRunning = true
             print("Starting auto fling targeting " .. targetCount .. " players...")
             
+            -- Setup fling physics first
+            if not setupFlingPhysics() then
+                print("Failed to setup fling physics!")
+                isFlingRunning = false
+                return
+            end
+            
+            -- Start the fling loop
+            startFlingLoop()
+            
             task.spawn(function()
+                local Root = Character.HumanoidRootPart
                 local originalPosition = Root.CFrame
                 
                 -- Get nearest players
@@ -152,6 +228,7 @@ return function(services)
                 
                 if #nearest == 0 then
                     print("No valid targets found!")
+                    cleanupFlingPhysics()
                     isFlingRunning = false
                     return
                 end
@@ -164,32 +241,28 @@ return function(services)
                         break
                     end
                     
-                    local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                    local targetRoot = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
                     if targetRoot then
                         print("Targeting player " .. i .. "/" .. #nearest .. ": " .. plr.Name)
                         
-                        -- Slam your HumanoidRootPart directly into theirs
-                        Root.CFrame = targetRoot.CFrame
+                        -- Teleport to target with slight offset to ensure collision
+                        local offset = Vector3.new(math.random(-2, 2), 0, math.random(-2, 2))
+                        Root.CFrame = targetRoot.CFrame + offset
                         
-                        -- Apply fling velocity
-                        local vel = Root.Velocity
-                        Root.Velocity = vel * 10000 + Vector3.new(0, math.max(vel.Y * 1000, -30000), 0)
-                        RunService.RenderStepped:Wait()
-                        Root.Velocity = Vector3.new(vel.X, math.max(vel.Y + 0.1, -50), vel.Z)
-                        
-                        task.wait(0.4)
+                        -- Wait for fling effect
+                        task.wait(1.5)
                     else
                         print("Skipping " .. plr.Name .. " - no valid character")
                     end
                 end
                 
-                -- Return to original position
-                if Character and Character.Parent then
-                    local currentRoot = getRoot(Character)
-                    if currentRoot then
-                        currentRoot.CFrame = originalPosition
-                        print("Returned to original position")
-                    end
+                -- Clean up and return to original position
+                cleanupFlingPhysics()
+                
+                if Character and Character:FindFirstChild("HumanoidRootPart") then
+                    task.wait(0.5) -- Wait for physics to settle
+                    Character.HumanoidRootPart.CFrame = originalPosition
+                    print("Returned to original position")
                 end
                 
                 isFlingRunning = false
@@ -204,6 +277,7 @@ return function(services)
         Callback = function()
             if isFlingRunning then
                 isFlingRunning = false
+                cleanupFlingPhysics()
                 print("Auto fling stopped")
             else
                 print("Auto fling is not running")
@@ -216,14 +290,15 @@ return function(services)
         Name = 'Emergency Teleport Back',
         Callback = function()
             local Character = LocalPlayer.Character
-            if Character then
-                local Root = getRoot(Character)
-                if Root then
-                    -- Teleport to a safe position (high up)
-                    local currentPos = Root.Position
-                    Root.CFrame = CFrame.new(currentPos.X, currentPos.Y + 50, currentPos.Z)
-                    print("Emergency teleported to safe position")
-                end
+            if Character and Character:FindFirstChild("HumanoidRootPart") then
+                -- Clean up fling physics first
+                cleanupFlingPhysics()
+                isFlingRunning = false
+                
+                -- Teleport to a safe position (high up)
+                local currentPos = Character.HumanoidRootPart.Position
+                Character.HumanoidRootPart.CFrame = CFrame.new(currentPos.X, currentPos.Y + 50, currentPos.Z)
+                print("Emergency teleported to safe position")
             end
         end,
     })
@@ -248,6 +323,7 @@ return function(services)
         onCharacterAdded = function(character)
             -- Stop auto fling if character respawns
             if isFlingRunning then
+                cleanupFlingPhysics()
                 isFlingRunning = false
                 print("Auto fling stopped due to character respawn")
             end
