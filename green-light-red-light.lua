@@ -3,31 +3,31 @@ return function(services)
     local MainTab = services.MainTab
     local Players = services.Players
     local LocalPlayer = services.LocalPlayer
-    
+
     -- Create section
     local Section = MainTab:CreateSection('Green Light Red Light')
-    
+
     -- Teleport to Position Button
     MainTab:CreateButton({
-        Name = 'Teleport to Position',
+        Name = 'Finish Green Light, Red Light',
         Callback = function()
             local Players = game:GetService('Players')
             local LocalPlayer = Players.LocalPlayer
 
-            -- The target CFrame (position + rotation)
+            -- The updated target CFrame (position + rotation)
             local targetCFrame = CFrame.new(
-                -44.893211,
-                1049.128174,
-                113.800880, -- Position (X, Y, Z)
-                0.148912,
-                0,
-                -0.988850, -- Rotation row 1
-                -0,
-                1,
-                0, -- Rotation row 2
-                0.988850,
-                0,
-                0.148912 -- Rotation row 3
+                -41.7126923,
+                1021.32306,
+                134.34935, -- Position (X, Y, Z)
+                0.811150551,
+                0.237830803,
+                0.534295142, -- Rotation row 1
+                -8.95559788e-06,
+                0.913583994,
+                -0.406650066, -- Rotation row 2
+                -0.584837377,
+                0.32984966,
+                0.741056323 -- Rotation row 3
             )
 
             -- Wait for character and teleport
@@ -97,9 +97,9 @@ return function(services)
             print('Teleported to end of glass bridge')
         end,
     })
-    
+
     return {
-        name = "Green Light Red Light",
-        version = "1.0.0"
+        name = 'Green Light Red Light',
+        version = '1.0.0',
     }
 end
