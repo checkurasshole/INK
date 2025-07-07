@@ -57,6 +57,30 @@ return function(services)
         return result
     end
     
+    -- Enable noclip
+    local function enableNoclip()
+        local Character = LocalPlayer.Character
+        if not Character then return end
+        
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+    
+    -- Disable noclip
+    local function disableNoclip()
+        local Character = LocalPlayer.Character
+        if not Character then return end
+        
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+    
     -- Setup fling physics
     local function setupFlingPhysics()
         local Character = LocalPlayer.Character
@@ -65,6 +89,9 @@ return function(services)
         end
         
         local Root = Character.HumanoidRootPart
+        
+        -- Enable noclip first
+        enableNoclip()
         
         -- Apply custom physical properties to all parts
         for _, child in pairs(Character:GetDescendants()) do
@@ -110,6 +137,9 @@ return function(services)
                 end
             end
         end
+        
+        -- Disable noclip
+        disableNoclip()
         
         bodyAngularVelocity = nil
         if flingConnection then
@@ -245,9 +275,8 @@ return function(services)
                     if targetRoot then
                         print("Targeting player " .. i .. "/" .. #nearest .. ": " .. plr.Name)
                         
-                        -- Teleport to target with slight offset to ensure collision
-                        local offset = Vector3.new(math.random(-2, 2), 0, math.random(-2, 2))
-                        Root.CFrame = targetRoot.CFrame + offset
+                        -- Teleport directly into the target (noclip allows this)
+                        Root.CFrame = targetRoot.CFrame
                         
                         -- Wait for fling effect
                         task.wait(1.5)
