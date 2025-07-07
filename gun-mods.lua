@@ -98,9 +98,9 @@ return function(services)
             end
         end
     end
-
-     -- Create section
-    local Section = MainTab:CreateSection('Gun Mods')
+    
+    -- Create Gun Mods Section
+    local GunModsSection = MainTab:CreateSection('Gun Mods')
     
     -- Create Gun Mods Button
     MainTab:CreateButton({
