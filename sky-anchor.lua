@@ -11,7 +11,7 @@ return function(services)
     local anchorPart = nil
 
     MainTab:CreateToggle({
-        Name = 'Sky Anchor Teleport',
+        Name = 'Safe Position Teleport',
         CurrentValue = false,
         Flag = 'SkyAnchorToggle',
         Callback = function(Value)
