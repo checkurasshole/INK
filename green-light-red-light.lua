@@ -61,7 +61,7 @@ return function(services)
 
     -- Teleport to End of Glass Button
     MainTab:CreateButton({
-        Name = 'Teleport to End of Glass',
+        Name = 'Teleport to End of Glass(Quick Method)',
         Callback = function()
             local Players = game:GetService('Players')
             local LocalPlayer = Players.LocalPlayer
