@@ -387,7 +387,8 @@ local function getCacheData(clientId)
         return {
             count = 0,
             preferRAW = false,
-            validated = false
+            validated = false,
+            accessDenied = false
         }
     end
     
@@ -400,7 +401,8 @@ local function resetCache(clientId)
         count = 0,
         lastCheck = os.time(),
         preferRAW = false,
-        validated = false
+        validated = false,
+        accessDenied = false
     }
     saveCache(cache)
 end
@@ -482,6 +484,7 @@ local function validateKey(key, clientId)
         end)
         
         setValidated(clientId, true)
+        setAccessDenied(clientId, false)
         saveKey(key)
         return true
     else
@@ -772,6 +775,10 @@ local function isClientIdWhitelisted(clientId, encryptedClientId)
     
     local cacheData = getCacheData(clientId)
     
+    if cacheData.accessDenied then
+        return false, nil, "access_denied"
+    end
+    
     if SHOW_STATS then
         print(cacheData.count .. "/" .. GITHUB_CHECK_LIMIT)
     end
@@ -783,6 +790,7 @@ local function isClientIdWhitelisted(clientId, encryptedClientId)
         local apiFound, apiData, errorType = checkHWIDAPI(encryptedClientId, clientId)
         
         if errorType == "access_denied" then
+            setAccessDenied(clientId, true)
             return false, nil, "access_denied"
         end
         
@@ -795,6 +803,7 @@ local function isClientIdWhitelisted(clientId, encryptedClientId)
         local apiFound, apiData, errorType = checkHWIDAPI(encryptedClientId, clientId)
         
         if errorType == "access_denied" then
+            setAccessDenied(clientId, true)
             return false, nil, "access_denied"
         end
         
@@ -835,6 +844,7 @@ local function isClientIdWhitelisted(clientId, encryptedClientId)
         local apiFound, apiData, errorType = checkHWIDAPI(encryptedClientId, clientId)
         
         if errorType == "access_denied" then
+            setAccessDenied(clientId, true)
             return false, nil, "access_denied"
         end
         
@@ -843,6 +853,7 @@ local function isClientIdWhitelisted(clientId, encryptedClientId)
         end
     end
     
+    setAccessDenied(clientId, true)
     return false, nil, "access_denied"
 end
 
@@ -981,8 +992,7 @@ if not whitelisted or errorType == "access_denied" or errorType == "tamper_detec
     local timeout = 300
     local elapsed = 0
     while not validationComplete and elapsed < timeout do
-        wait(1)
-        elapsed = elapsed + 1
+        wait(1) elapsed = elapsed + 1
     end
     
     if validationSuccess then
