@@ -16,6 +16,9 @@ local LocalPlayer = Players.LocalPlayer
 local Options = Library.Options
 local Toggles = Library.Toggles
 
+-- Strict Mobile Detection
+local IsMobile = UserInputService.TouchEnabled and (not UserInputService.MouseEnabled or not UserInputService.KeyboardEnabled)
+
 -- Restricted Game Check
 local IS_RESTRICTED_GAME = (game.PlaceId == 136801880565837)
 
@@ -34,7 +37,6 @@ local Tabs = {
     ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
 }
 
-local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 Module.Initialize(Library, Options, Toggles)
 
 local FOVCircle = Drawing.new("Circle")
@@ -145,6 +147,8 @@ AimGroup:AddToggle("WallCheck", { Text = "Visibility Check", Default = true })
 AimGroup:AddSlider("AimbotFOV", { Text = "FOV Size", Default = 150, Min = 0, Max = 1000 })
 AimGroup:AddSlider("Smoothing", { Text = "Smoothness", Default = 2, Min = 1, Max = 20, Rounding = 1 })
 AimGroup:AddDropdown("AimPart", { Values = {"Head", "HumanoidRootPart"}, Default = 1, Text = "Target Part" })
+
+-- Only add aiming Keybind if not on Mobile
 if not IsMobile then
     AimGroup:AddLabel("Aim Keybind"):AddKeyPicker("AimKey", { Default = "MB2", Mode = "Hold", Text = "Aim Lock" })
 end
@@ -164,8 +168,8 @@ end
 local LoopGroup = Tabs.Main:AddRightGroupbox("Auto Play & Shoot")
 LoopGroup:AddToggle("AutoPlay", { Text = "Auto Play Loop", Default = false })
 
--- Fix: Do not show TriggerBot on Mobile for this specific restricted game to prevent freezing
-if not (IS_RESTRICTED_GAME and IsMobile) then
+-- Only add Auto Shoot (TriggerBot) if not on Mobile
+if not IsMobile then
     LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
 end
 
@@ -235,7 +239,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     if not AimActive then StickyTarget = nil end
 
     -- Kill V1 logic
-    if not IS_RESTRICTED_GAME and Toggles.KillV1Enabled and Toggles.KillV1Enabled.Value and StickyTarget and StickyTarget.Character and not LocalInLobby then
+    if not IS_RESTRICTED_GAME and Toggles.KillV1Enabled.Value and StickyTarget and StickyTarget.Character and not LocalInLobby then
         local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local TargetHead = StickyTarget.Character:FindFirstChild("Head")
         if MyRoot and TargetHead then
@@ -247,7 +251,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 
     -- Aimbot Execution
-    if AimActive and StickyTarget and (IS_RESTRICTED_GAME or (Toggles.KillV1Enabled and not Toggles.KillV1Enabled.Value)) then
+    if AimActive and StickyTarget and (IS_RESTRICTED_GAME or not Toggles.KillV1Enabled.Value) then
         local Part = StickyTarget.Character:FindFirstChild(Options.AimPart.Value)
         if Part and not hasWallObstruction(Part) then
             local TargetPos = Part.Position
@@ -360,7 +364,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
 
             Obj.Name.Visible = Toggles.VisName.Value
             if Toggles.VisName.Value then
-                Obj.Name.Text = Player.Name .. "[" .. math.floor(Dist) .. "M]"
+                Obj.Name.Text = Player.Name .. " [" .. math.floor(Dist) .. "M]"
                 Obj.Name.Position = Vector2.new(Pos.X, Y - 20)
                 Obj.Name.Color = MainCol
             end
@@ -368,12 +372,12 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 end)
 
--- STRICT CROSSHAIR TRIGGERBOT LOGIC
+-- STRICT CROSSHAIR TRIGGERBOT LOGIC (Disabled safely on Mobile)
 RunService.Heartbeat:Connect(function()
-    -- Safety check: ensure Toggles.TriggerBot exists before checking its value
-    if not Toggles.TriggerBot or not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
+    -- Bypass execution if player is on Mobile or Toggle is nil/off
+    if IsMobile or not Toggles.TriggerBot or not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
     
-    local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
+    local MouseLoc = UserInputService:GetMouseLocation()
     local UnitRay = Camera:ViewportPointToRay(MouseLoc.X, MouseLoc.Y)
     
     local Params = RaycastParams.new()
@@ -410,7 +414,7 @@ task.spawn(function()
             if p ~= LocalPlayer and IsValidTarget(p) then
                 local Root = p.Character:FindFirstChild("HumanoidRootPart")
                 if Root then
-                    if Toggles.HitboxEnabled and Toggles.HitboxEnabled.Value then
+                    if Toggles.HitboxEnabled.Value then
                         Root.Size = Vector3.new(Options.HitboxSize.Value, Options.HitboxSize.Value, Options.HitboxSize.Value)
                         Root.Transparency = Options.HitboxTransparency.Value
                         Root.Color = Options.HitboxColor.Value
@@ -466,4 +470,4 @@ Library:OnUnload(function()
     for p, _ in pairs(ESP_Cache) do CompletelyDestroyESP(p) end
 end)
 
-Library:Notify("Full Integration Loaded | Mobile Optimizations Active")
+Library:Notify("Fully Loaded | Mobile Restricted Mode Set")
