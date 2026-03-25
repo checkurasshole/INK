@@ -21,7 +21,7 @@ local IS_RESTRICTED_GAME = (game.PlaceId == 136801880565837)
 
 local Window = Library:CreateWindow({
     Title = "COMBO_WICK | Tactical AIO (Unified)",
-    Footer = "Strict Crosshair Check | Bulletproof ESP",
+    Footer = "Strict Crosshair Check | Mobile Joystick Fixed",
     Icon = 95816097006870,
     NotifySide = "Right",
     ShowCustomCursor = false, -- Disabled custom cursor as requested
@@ -140,7 +140,7 @@ end
 local AimGroup = Tabs.Main:AddLeftGroupbox("Aimbot Settings")
 AimGroup:AddToggle("AimbotEnabled", { Text = "Enabled", Default = false })
 AimGroup:AddDropdown("AimMethod", { Values = {"Camera", "Mouse", "Hybrid"}, Default = 3, Text = "Aim Method" })
-AimGroup:AddToggle("TeamCheck", { Text = "Team Check", Default = false }) -- Changed to off by default
+AimGroup:AddToggle("TeamCheck", { Text = "Team Check", Default = false }) 
 AimGroup:AddToggle("WallCheck", { Text = "Visibility Check", Default = true })
 AimGroup:AddSlider("AimbotFOV", { Text = "FOV Size", Default = 150, Min = 0, Max = 1000 })
 AimGroup:AddSlider("Smoothing", { Text = "Smoothness", Default = 2, Min = 1, Max = 20, Rounding = 1 })
@@ -164,6 +164,8 @@ end
 local LoopGroup = Tabs.Main:AddRightGroupbox("Auto Play & Shoot")
 LoopGroup:AddToggle("AutoPlay", { Text = "Auto Play Loop", Default = false })
 LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
+-- Mobile Fix: Adjustable delay to prevent joystick freezing
+LoopGroup:AddSlider("TriggerDelay", { Text = "TriggerBot Delay (MS)", Default = 50, Min = 10, Max = 250, Rounding = 0 })
 LoopGroup:AddToggle("AlwaysOn", { Text = "Always On (Auto-Lock)", Default = false })
 
 -- VISUALS
@@ -171,7 +173,7 @@ local VisGroup = Tabs.Visuals:AddLeftGroupbox("Visuals")
 VisGroup:AddToggle("VisBox", { Text = "Corner Brackets", Default = false })
 VisGroup:AddToggle("VisSkeleton", { Text = "Skeleton ESP", Default = false })
 VisGroup:AddToggle("VisHealth", { Text = "Dynamic Health Bar", Default = false })
-VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false }) -- Renamed
+VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false }) 
 VisGroup:AddToggle("VisTracer", { Text = "Tracers", Default = false })
 VisGroup:AddToggle("VisHead", { Text = "Head Indicator", Default = false })
 VisGroup:AddToggle("VisChams", { Text = "Player Chams", Default = false })
@@ -188,7 +190,6 @@ ColorGroup:AddLabel("Team Color"):AddColorPicker("TeamCol", { Default = Color3.f
 -- BULLETPROOF ESP CACHE MANAGER
 local function GetOrCreateESP(Player)
     if not ESP_Cache[Player] then
-        -- FIXED: Added required text properties (Size, Center, Outline, Font) so the name actually renders
         local nameText = Drawing.new("Text")
         nameText.Size = 16 
         nameText.Center = true
@@ -257,7 +258,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
         end
     end
 
-    -- 1. BULLETPROOF ANTI-GHOST METHOD: FORCE HIDE EVERYTHING EVERY FRAME
+    -- 1. BULLETPROOF ANTI-GHOST METHOD
     for p, Obj in pairs(ESP_Cache) do
         for _, v in pairs(Obj.Corners) do v.Visible = false end
         for _, v in pairs(Obj.Skeleton) do v.Visible = false end
@@ -271,7 +272,6 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     -- 2. ONLY TURN ON DRAWINGS FOR VALID/LIVING PLAYERS
     for _, Player in pairs(Players:GetPlayers()) do
         if Player == LocalPlayer then continue end
-        
         if not IsValidTarget(Player) then continue end
 
         local Char = Player.Character
@@ -282,12 +282,11 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
         if Dist > Options.VisMaxDist.Value then continue end
 
         local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
-        if Pos.X ~= Pos.X or Pos.Y ~= Pos.Y then continue end -- NaN mathematical crash prevention
+        if Pos.X ~= Pos.X or Pos.Y ~= Pos.Y then continue end 
         
         local Obj = GetOrCreateESP(Player)
         local MainCol = Toggles.RainbowESP.Value and rainbowCol or (IsTeammate(Player) and Options.TeamCol.Value or Options.EnemyCol.Value)
         
-        -- Chams apply even if off-screen
         Obj.Chams.Enabled = Toggles.VisChams.Value or Toggles.RainbowESP.Value
         if Obj.Chams.Enabled then
             Obj.Chams.Adornee = Char
@@ -295,7 +294,6 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
             Obj.Chams.OutlineColor = Color3.new(1,1,1)
         end
 
-        -- Render 2D ESP only if on-screen
         if OnScreen then
             local Scale = 1/Pos.Z * 1000
             local W, H = 2.5 * Scale, 4.5 * Scale
@@ -364,9 +362,14 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 end)
 
--- STRICT CROSSHAIR TRIGGERBOT LOGIC
+-- STRICT CROSSHAIR TRIGGERBOT LOGIC WITH MOBILE FIX
+local LastTrigger = 0
 RunService.Heartbeat:Connect(function()
     if not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
+    
+    -- The cooldown debounce logic (prevents 60-FPS spam which freezes mobile movement)
+    local DelaySecs = Options.TriggerDelay.Value / 1000
+    if (tick() - LastTrigger) < DelaySecs then return end
     
     local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
     local UnitRay = Camera:ViewportPointToRay(MouseLoc.X, MouseLoc.Y)
@@ -386,9 +389,11 @@ RunService.Heartbeat:Connect(function()
                 local targetInst = HitActor:FindFirstChild(TargetPartName)
                 
                 if Result.Instance.Name == TargetPartName or (targetInst and Result.Instance:IsDescendantOf(targetInst)) then
+                    LastTrigger = tick()
                     mouse1click()
                 elseif Result.Instance:IsA("BasePart") and Result.Instance.Parent == HitActor then
                     if StickyTarget == p then
+                        LastTrigger = tick()
                         mouse1click()
                     end
                 end
@@ -461,4 +466,4 @@ Library:OnUnload(function()
     for p, _ in pairs(ESP_Cache) do CompletelyDestroyESP(p) end
 end)
 
-Library:Notify("Full Integration Loaded | Texts Restored")
+Library:Notify("Full Integration Loaded | Mobile Anti-Freeze Enabled")
