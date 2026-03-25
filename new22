@@ -30,8 +30,8 @@ else
 end
 
 local Window = Library:CreateWindow({
-    Title = "COMBO_WICK | Tactical AIO (Unified)",
-    Footer = "Strict Crosshair Check | Bulletproof ESP",
+    Title = "COMBO_WICK | Re-fined",
+    Footer = "",
     Icon = 95816097006870,
     NotifySide = "Right",
     ShowCustomCursor = false, -- Disabled custom cursor as requested
