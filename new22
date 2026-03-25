@@ -21,7 +21,7 @@ local IS_RESTRICTED_GAME = (game.PlaceId == 136801880565837)
 
 local Window = Library:CreateWindow({
     Title = "COMBO_WICK | Tactical AIO (Unified)",
-    Footer = "Strict Crosshair Check | Mobile Joystick Fixed",
+    Footer = "Strict Crosshair Check | Bulletproof ESP",
     Icon = 95816097006870,
     NotifySide = "Right",
     ShowCustomCursor = false, -- Disabled custom cursor as requested
@@ -140,7 +140,7 @@ end
 local AimGroup = Tabs.Main:AddLeftGroupbox("Aimbot Settings")
 AimGroup:AddToggle("AimbotEnabled", { Text = "Enabled", Default = false })
 AimGroup:AddDropdown("AimMethod", { Values = {"Camera", "Mouse", "Hybrid"}, Default = 3, Text = "Aim Method" })
-AimGroup:AddToggle("TeamCheck", { Text = "Team Check", Default = false }) 
+AimGroup:AddToggle("TeamCheck", { Text = "Team Check", Default = false }) -- Changed to off by default
 AimGroup:AddToggle("WallCheck", { Text = "Visibility Check", Default = true })
 AimGroup:AddSlider("AimbotFOV", { Text = "FOV Size", Default = 150, Min = 0, Max = 1000 })
 AimGroup:AddSlider("Smoothing", { Text = "Smoothness", Default = 2, Min = 1, Max = 20, Rounding = 1 })
@@ -163,9 +163,12 @@ end
 
 local LoopGroup = Tabs.Main:AddRightGroupbox("Auto Play & Shoot")
 LoopGroup:AddToggle("AutoPlay", { Text = "Auto Play Loop", Default = false })
-LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
--- Mobile Fix: Adjustable delay to prevent joystick freezing
-LoopGroup:AddSlider("TriggerDelay", { Text = "TriggerBot Delay (MS)", Default = 50, Min = 10, Max = 250, Rounding = 0 })
+
+-- Fix: Do not show TriggerBot on Mobile for this specific restricted game to prevent freezing
+if not (IS_RESTRICTED_GAME and IsMobile) then
+    LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
+end
+
 LoopGroup:AddToggle("AlwaysOn", { Text = "Always On (Auto-Lock)", Default = false })
 
 -- VISUALS
@@ -173,7 +176,7 @@ local VisGroup = Tabs.Visuals:AddLeftGroupbox("Visuals")
 VisGroup:AddToggle("VisBox", { Text = "Corner Brackets", Default = false })
 VisGroup:AddToggle("VisSkeleton", { Text = "Skeleton ESP", Default = false })
 VisGroup:AddToggle("VisHealth", { Text = "Dynamic Health Bar", Default = false })
-VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false }) 
+VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false })
 VisGroup:AddToggle("VisTracer", { Text = "Tracers", Default = false })
 VisGroup:AddToggle("VisHead", { Text = "Head Indicator", Default = false })
 VisGroup:AddToggle("VisChams", { Text = "Player Chams", Default = false })
@@ -232,7 +235,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     if not AimActive then StickyTarget = nil end
 
     -- Kill V1 logic
-    if not IS_RESTRICTED_GAME and Toggles.KillV1Enabled.Value and StickyTarget and StickyTarget.Character and not LocalInLobby then
+    if not IS_RESTRICTED_GAME and Toggles.KillV1Enabled and Toggles.KillV1Enabled.Value and StickyTarget and StickyTarget.Character and not LocalInLobby then
         local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local TargetHead = StickyTarget.Character:FindFirstChild("Head")
         if MyRoot and TargetHead then
@@ -244,7 +247,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 
     -- Aimbot Execution
-    if AimActive and StickyTarget and (IS_RESTRICTED_GAME or not Toggles.KillV1Enabled.Value) then
+    if AimActive and StickyTarget and (IS_RESTRICTED_GAME or (Toggles.KillV1Enabled and not Toggles.KillV1Enabled.Value)) then
         local Part = StickyTarget.Character:FindFirstChild(Options.AimPart.Value)
         if Part and not hasWallObstruction(Part) then
             local TargetPos = Part.Position
@@ -258,7 +261,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
         end
     end
 
-    -- 1. BULLETPROOF ANTI-GHOST METHOD
+    -- 1. BULLETPROOF ANTI-GHOST METHOD: FORCE HIDE EVERYTHING EVERY FRAME
     for p, Obj in pairs(ESP_Cache) do
         for _, v in pairs(Obj.Corners) do v.Visible = false end
         for _, v in pairs(Obj.Skeleton) do v.Visible = false end
@@ -272,6 +275,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     -- 2. ONLY TURN ON DRAWINGS FOR VALID/LIVING PLAYERS
     for _, Player in pairs(Players:GetPlayers()) do
         if Player == LocalPlayer then continue end
+        
         if not IsValidTarget(Player) then continue end
 
         local Char = Player.Character
@@ -282,11 +286,12 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
         if Dist > Options.VisMaxDist.Value then continue end
 
         local Pos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
-        if Pos.X ~= Pos.X or Pos.Y ~= Pos.Y then continue end 
+        if Pos.X ~= Pos.X or Pos.Y ~= Pos.Y then continue end -- NaN mathematical crash prevention
         
         local Obj = GetOrCreateESP(Player)
         local MainCol = Toggles.RainbowESP.Value and rainbowCol or (IsTeammate(Player) and Options.TeamCol.Value or Options.EnemyCol.Value)
         
+        -- Chams apply even if off-screen
         Obj.Chams.Enabled = Toggles.VisChams.Value or Toggles.RainbowESP.Value
         if Obj.Chams.Enabled then
             Obj.Chams.Adornee = Char
@@ -294,6 +299,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
             Obj.Chams.OutlineColor = Color3.new(1,1,1)
         end
 
+        -- Render 2D ESP only if on-screen
         if OnScreen then
             local Scale = 1/Pos.Z * 1000
             local W, H = 2.5 * Scale, 4.5 * Scale
@@ -354,7 +360,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
 
             Obj.Name.Visible = Toggles.VisName.Value
             if Toggles.VisName.Value then
-                Obj.Name.Text = Player.Name .. " [" .. math.floor(Dist) .. "M]"
+                Obj.Name.Text = Player.Name .. "[" .. math.floor(Dist) .. "M]"
                 Obj.Name.Position = Vector2.new(Pos.X, Y - 20)
                 Obj.Name.Color = MainCol
             end
@@ -362,14 +368,10 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 end)
 
--- STRICT CROSSHAIR TRIGGERBOT LOGIC WITH MOBILE FIX
-local LastTrigger = 0
+-- STRICT CROSSHAIR TRIGGERBOT LOGIC
 RunService.Heartbeat:Connect(function()
-    if not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
-    
-    -- The cooldown debounce logic (prevents 60-FPS spam which freezes mobile movement)
-    local DelaySecs = Options.TriggerDelay.Value / 1000
-    if (tick() - LastTrigger) < DelaySecs then return end
+    -- Safety check: ensure Toggles.TriggerBot exists before checking its value
+    if not Toggles.TriggerBot or not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
     
     local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
     local UnitRay = Camera:ViewportPointToRay(MouseLoc.X, MouseLoc.Y)
@@ -389,11 +391,9 @@ RunService.Heartbeat:Connect(function()
                 local targetInst = HitActor:FindFirstChild(TargetPartName)
                 
                 if Result.Instance.Name == TargetPartName or (targetInst and Result.Instance:IsDescendantOf(targetInst)) then
-                    LastTrigger = tick()
                     mouse1click()
                 elseif Result.Instance:IsA("BasePart") and Result.Instance.Parent == HitActor then
                     if StickyTarget == p then
-                        LastTrigger = tick()
                         mouse1click()
                     end
                 end
@@ -410,7 +410,7 @@ task.spawn(function()
             if p ~= LocalPlayer and IsValidTarget(p) then
                 local Root = p.Character:FindFirstChild("HumanoidRootPart")
                 if Root then
-                    if Toggles.HitboxEnabled.Value then
+                    if Toggles.HitboxEnabled and Toggles.HitboxEnabled.Value then
                         Root.Size = Vector3.new(Options.HitboxSize.Value, Options.HitboxSize.Value, Options.HitboxSize.Value)
                         Root.Transparency = Options.HitboxTransparency.Value
                         Root.Color = Options.HitboxColor.Value
@@ -466,4 +466,4 @@ Library:OnUnload(function()
     for p, _ in pairs(ESP_Cache) do CompletelyDestroyESP(p) end
 end)
 
-Library:Notify("Full Integration Loaded | Mobile Anti-Freeze Enabled")
+Library:Notify("Full Integration Loaded | Mobile Optimizations Active")
