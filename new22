@@ -16,11 +16,18 @@ local LocalPlayer = Players.LocalPlayer
 local Options = Library.Options
 local Toggles = Library.Toggles
 
--- Strict Mobile Detection
-local IsMobile = UserInputService.TouchEnabled and (not UserInputService.MouseEnabled or not UserInputService.KeyboardEnabled)
-
 -- Restricted Game Check
 local IS_RESTRICTED_GAME = (game.PlaceId == 136801880565837)
+
+-- ADVANCED MOBILE DETECTION (Bypasses Executor Spoofing)
+local IsMobile = false
+local success, platform = pcall(function() return UserInputService:GetPlatform() end)
+if success then
+    IsMobile = (platform == Enum.Platform.IOS or platform == Enum.Platform.Android)
+else
+    -- Fallback: If touch is enabled, assume mobile (Executors fake KeyboardEnabled)
+    IsMobile = UserInputService.TouchEnabled
+end
 
 local Window = Library:CreateWindow({
     Title = "COMBO_WICK | Tactical AIO (Unified)",
@@ -122,6 +129,8 @@ end
 local function GetClosestTarget()
     if IsInSafeZone(LocalPlayer) then return nil end
     local Target, Closest = nil, Options.AimbotFOV.Value
+    
+    -- Properly centers FOV/Aim for mobile since they use center crosshair instead of PC mouse
     local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
 
     for _, p in pairs(Players:GetPlayers()) do
@@ -147,8 +156,6 @@ AimGroup:AddToggle("WallCheck", { Text = "Visibility Check", Default = true })
 AimGroup:AddSlider("AimbotFOV", { Text = "FOV Size", Default = 150, Min = 0, Max = 1000 })
 AimGroup:AddSlider("Smoothing", { Text = "Smoothness", Default = 2, Min = 1, Max = 20, Rounding = 1 })
 AimGroup:AddDropdown("AimPart", { Values = {"Head", "HumanoidRootPart"}, Default = 1, Text = "Target Part" })
-
--- Only add aiming Keybind if not on Mobile
 if not IsMobile then
     AimGroup:AddLabel("Aim Keybind"):AddKeyPicker("AimKey", { Default = "MB2", Mode = "Hold", Text = "Aim Lock" })
 end
@@ -167,12 +174,7 @@ end
 
 local LoopGroup = Tabs.Main:AddRightGroupbox("Auto Play & Shoot")
 LoopGroup:AddToggle("AutoPlay", { Text = "Auto Play Loop", Default = false })
-
--- Only add Auto Shoot (TriggerBot) if not on Mobile
-if not IsMobile then
-    LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
-end
-
+LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
 LoopGroup:AddToggle("AlwaysOn", { Text = "Always On (Auto-Lock)", Default = false })
 
 -- VISUALS
@@ -180,7 +182,7 @@ local VisGroup = Tabs.Visuals:AddLeftGroupbox("Visuals")
 VisGroup:AddToggle("VisBox", { Text = "Corner Brackets", Default = false })
 VisGroup:AddToggle("VisSkeleton", { Text = "Skeleton ESP", Default = false })
 VisGroup:AddToggle("VisHealth", { Text = "Dynamic Health Bar", Default = false })
-VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false })
+VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false }) -- Renamed
 VisGroup:AddToggle("VisTracer", { Text = "Tracers", Default = false })
 VisGroup:AddToggle("VisHead", { Text = "Head Indicator", Default = false })
 VisGroup:AddToggle("VisChams", { Text = "Player Chams", Default = false })
@@ -220,6 +222,8 @@ end
 RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 1, function()
     local LocalInLobby = IsInSafeZone(LocalPlayer)
     local rainbowCol = GetRainbowColor()
+    
+    -- Center FOV Circle perfectly if Mobile detected
     local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
 
     Module.autoPlayEnabled = Toggles.AutoPlay.Value
@@ -372,12 +376,11 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 end)
 
--- STRICT CROSSHAIR TRIGGERBOT LOGIC (Disabled safely on Mobile)
+-- STRICT CROSSHAIR TRIGGERBOT LOGIC
 RunService.Heartbeat:Connect(function()
-    -- Bypass execution if player is on Mobile or Toggle is nil/off
-    if IsMobile or not Toggles.TriggerBot or not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
+    if not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
     
-    local MouseLoc = UserInputService:GetMouseLocation()
+    local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
     local UnitRay = Camera:ViewportPointToRay(MouseLoc.X, MouseLoc.Y)
     
     local Params = RaycastParams.new()
@@ -433,6 +436,7 @@ end)
 local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu")
 MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
 MenuGroup:AddButton("Unload", function() Library:Unload() end)
+-- Dynamic Label checking if you are on Mobile vs PC
 MenuGroup:AddLabel("Platform: " .. (IsMobile and "📱 Mobile" or "💻 PC"))
 
 Library.ToggleKeybind = Options.MenuKeybind
@@ -470,4 +474,4 @@ Library:OnUnload(function()
     for p, _ in pairs(ESP_Cache) do CompletelyDestroyESP(p) end
 end)
 
-Library:Notify("Fully Loaded | Mobile Restricted Mode Set")
+Library:Notify("Full Integration Loaded | Accurate Platform Detected")
