@@ -151,11 +151,13 @@ end
 local AimGroup = Tabs.Main:AddLeftGroupbox("Aimbot Settings")
 AimGroup:AddToggle("AimbotEnabled", { Text = "Enabled", Default = false })
 AimGroup:AddDropdown("AimMethod", { Values = {"Camera", "Mouse", "Hybrid"}, Default = 3, Text = "Aim Method" })
-AimGroup:AddToggle("TeamCheck", { Text = "Team Check", Default = false }) -- Changed to off by default
+AimGroup:AddToggle("TeamCheck", { Text = "Team Check", Default = false })
 AimGroup:AddToggle("WallCheck", { Text = "Visibility Check", Default = true })
 AimGroup:AddSlider("AimbotFOV", { Text = "FOV Size", Default = 150, Min = 0, Max = 1000 })
 AimGroup:AddSlider("Smoothing", { Text = "Smoothness", Default = 2, Min = 1, Max = 20, Rounding = 1 })
 AimGroup:AddDropdown("AimPart", { Values = {"Head", "HumanoidRootPart"}, Default = 1, Text = "Target Part" })
+
+-- Hide PC Keybind from Mobile UI
 if not IsMobile then
     AimGroup:AddLabel("Aim Keybind"):AddKeyPicker("AimKey", { Default = "MB2", Mode = "Hold", Text = "Aim Lock" })
 end
@@ -174,7 +176,12 @@ end
 
 local LoopGroup = Tabs.Main:AddRightGroupbox("Auto Play & Shoot")
 LoopGroup:AddToggle("AutoPlay", { Text = "Auto Play Loop", Default = false })
-LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
+
+-- Hide Triggerbot from Mobile UI (since mouse1click is a PC function)
+if not IsMobile then
+    LoopGroup:AddToggle("TriggerBot", { Text = "Auto Shoot (On Crosshair)", Default = false })
+end
+
 LoopGroup:AddToggle("AlwaysOn", { Text = "Always On (Auto-Lock)", Default = false })
 
 -- VISUALS
@@ -182,7 +189,7 @@ local VisGroup = Tabs.Visuals:AddLeftGroupbox("Visuals")
 VisGroup:AddToggle("VisBox", { Text = "Corner Brackets", Default = false })
 VisGroup:AddToggle("VisSkeleton", { Text = "Skeleton ESP", Default = false })
 VisGroup:AddToggle("VisHealth", { Text = "Dynamic Health Bar", Default = false })
-VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false }) -- Renamed
+VisGroup:AddToggle("VisName", { Text = "Player Names", Default = false }) 
 VisGroup:AddToggle("VisTracer", { Text = "Tracers", Default = false })
 VisGroup:AddToggle("VisHead", { Text = "Head Indicator", Default = false })
 VisGroup:AddToggle("VisChams", { Text = "Player Chams", Default = false })
@@ -368,7 +375,7 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
 
             Obj.Name.Visible = Toggles.VisName.Value
             if Toggles.VisName.Value then
-                Obj.Name.Text = Player.Name .. " [" .. math.floor(Dist) .. "M]"
+                Obj.Name.Text = Player.Name .. "[" .. math.floor(Dist) .. "M]"
                 Obj.Name.Position = Vector2.new(Pos.X, Y - 20)
                 Obj.Name.Color = MainCol
             end
@@ -376,38 +383,40 @@ RunService:BindToRenderStep("UnifiedRender", Enum.RenderPriority.Camera.Value + 
     end
 end)
 
--- STRICT CROSSHAIR TRIGGERBOT LOGIC
-RunService.Heartbeat:Connect(function()
-    if not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
-    
-    local MouseLoc = IsMobile and Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2) or UserInputService:GetMouseLocation()
-    local UnitRay = Camera:ViewportPointToRay(MouseLoc.X, MouseLoc.Y)
-    
-    local Params = RaycastParams.new()
-    Params.FilterType = Enum.RaycastFilterType.Exclude
-    Params.FilterDescendantsInstances = {LocalPlayer.Character}
-    
-    local Result = Workspace:Raycast(UnitRay.Origin, UnitRay.Direction * 1000, Params)
-    
-    if Result and Result.Instance then
-        local HitActor = Result.Instance:FindFirstAncestorOfClass("Model")
-        if HitActor and HitActor:FindFirstChild("Humanoid") then
-            local p = Players:GetPlayerFromCharacter(HitActor)
-            if p and p ~= LocalPlayer and not IsTeammate(p) and not IsInSafeZone(p) then
-                local TargetPartName = Options.AimPart.Value
-                local targetInst = HitActor:FindFirstChild(TargetPartName)
-                
-                if Result.Instance.Name == TargetPartName or (targetInst and Result.Instance:IsDescendantOf(targetInst)) then
-                    mouse1click()
-                elseif Result.Instance:IsA("BasePart") and Result.Instance.Parent == HitActor then
-                    if StickyTarget == p then
+-- STRICT CROSSHAIR TRIGGERBOT LOGIC (Only runs if PC)
+if not IsMobile then
+    RunService.Heartbeat:Connect(function()
+        if not Toggles.TriggerBot.Value or IsInSafeZone(LocalPlayer) then return end
+        
+        local MouseLoc = UserInputService:GetMouseLocation()
+        local UnitRay = Camera:ViewportPointToRay(MouseLoc.X, MouseLoc.Y)
+        
+        local Params = RaycastParams.new()
+        Params.FilterType = Enum.RaycastFilterType.Exclude
+        Params.FilterDescendantsInstances = {LocalPlayer.Character}
+        
+        local Result = Workspace:Raycast(UnitRay.Origin, UnitRay.Direction * 1000, Params)
+        
+        if Result and Result.Instance then
+            local HitActor = Result.Instance:FindFirstAncestorOfClass("Model")
+            if HitActor and HitActor:FindFirstChild("Humanoid") then
+                local p = Players:GetPlayerFromCharacter(HitActor)
+                if p and p ~= LocalPlayer and not IsTeammate(p) and not IsInSafeZone(p) then
+                    local TargetPartName = Options.AimPart.Value
+                    local targetInst = HitActor:FindFirstChild(TargetPartName)
+                    
+                    if Result.Instance.Name == TargetPartName or (targetInst and Result.Instance:IsDescendantOf(targetInst)) then
                         mouse1click()
+                    elseif Result.Instance:IsA("BasePart") and Result.Instance.Parent == HitActor then
+                        if StickyTarget == p then
+                            mouse1click()
+                        end
                     end
                 end
             end
         end
-    end
-end)
+    end)
+end
 
 -- HITBOX EXPANDER LOOP
 task.spawn(function()
@@ -474,4 +483,4 @@ Library:OnUnload(function()
     for p, _ in pairs(ESP_Cache) do CompletelyDestroyESP(p) end
 end)
 
-Library:Notify("Full Integration Loaded | Accurate Platform Detected")
+Library:Notify("Full Integration Loaded | Mobile Adapted")
