@@ -1,0 +1,350 @@
+-- combo_wick still in progress obsfucator
+local function XNNZppimtaw6(GlqwEz,WPsQeZ) local zkps1vP=GlqwEz+WPsQeZ*29914 if zkps1vP>21794 then return tostring(zkps1vP) end return zkps1vP end
+local function J_G1h6nkpWk9SY(y72I66,Bl2O93) local ywkGTEN=y72I66+Bl2O93*51332 if ywkGTEN>64750 then return tostring(ywkGTEN) end return ywkGTEN end
+local Da4VsOC0hra4_hsa=(function() local DEQl60=23368 return function(zjYaoO) DEQl60=(DEQl60*32044+(zjYaoO or 0))%2147483647 return DEQl60 end end)()
+
+local function p0F2oWRkbCO(iB5R7Y6,MBB6mOGGBS)
+  local zJbPYSII=0
+  local AyQHY3YLL=1
+  for wTnhWQ=0,7 do
+    if math.floor(iB5R7Y6/AyQHY3YLL)%2~=math.floor(MBB6mOGGBS/AyQHY3YLL)%2 then zJbPYSII=zJbPYSII+AyQHY3YLL end
+    AyQHY3YLL=AyQHY3YLL*2
+  end
+  return zJbPYSII
+end
+
+local exQnzoTA={237,230,183,75,226,118,227,24,47,99,151,249,206,95,230,112,121,175,186,54,200,11,99,91,9,78,92,140,207,9,173,105}
+
+local function nes9QQR(iB5R7Y6)
+  local zJbPYSII={}
+  for wTnhWQ=1,#iB5R7Y6 do
+    zJbPYSII[wTnhWQ]=p0F2oWRkbCO(iB5R7Y6[wTnhWQ],exQnzoTA[((wTnhWQ-1)%#exQnzoTA)+1])
+  end
+  return zJbPYSII
+end
+
+local function YQ2dT5RE(UanDOPj9paa,bsVfboKzZd)
+  local EdXrIkfVkeB=nes9QQR(bsVfboKzZd)
+  local UTXdhya4I={}
+  for wTnhWQ=1,#EdXrIkfVkeB do UTXdhya4I[wTnhWQ]=string.char(EdXrIkfVkeB[wTnhWQ]) end
+  UTXdhya4I=table.concat(UTXdhya4I)
+  if UanDOPj9paa==0 then return tonumber(UTXdhya4I) else return UTXdhya4I end
+end
+
+local b1eeqxQB={}
+b1eeqxQB[1]={
+  code={53,230,183,147,226,119,152,24,45,111,151,250,91,93,230,112,236,174,187,55,93,11,98,91,254,78,92,23,113,5,173,109,225,230,178,153,92,122,227,30,35,99,144,43,112,83,230,120,117,175,179,228,118,7,99,81,5,78,87,94,113,5,173,101,225,230,186,153,92,122,227,22,35,99,152,43,112,83,230,96,117,175,171,228,118,7,99,73,5,78,79,94,113,5,173,125,225,230,162,153,92,122,227,14,35,99,128,43,112,83,230,104,117,175,163,228,118,7,99,65,5,78,71,94,56,9,172,54,237,230,187,75,254,160,118,24,46,99,96,249,204,0,230,114,2,175,167,105,200,10,246,89,8,78,171,140,204,86,173,106,224,72,183,229,189,118,225,99,47,125,2,248,206,95,90},
+  nparams=0,
+  nlocals=4,
+  consts={
+    YQ2dT5RE(1,{129,137,214,47,145,2,145,113,65,4}),
+    YQ2dT5RE(1,{138,135,218,46}),
+    YQ2dT5RE(1,{165,146,195,59,165,19,151}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,93,2,224,215,169,54,146,24,12,205,207,69,173,121,0,52,103,58,57,226,187,39,206,6,128,201,194,50,138,67,211,45,2,6,249,158,225,47,147,18,21,198,201,94,173,111,78,56,102,32,40,233,161,125,128,3,148,133,216,62,139,89,145,125,73,16,184,145,171,62,130,3,86,194,219,95,166,36,26,62,122,38,52,228,167}),
+    YQ2dT5RE(1,{168,136,208,39,139,5,139}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,43,58,180,169,61,157,92,220,222,209,46,132,66,214,44,26,0,166,152,248,108,212,22,78,156,137,6,172,51,0,98,58}),
+    YQ2dT5RE(1,{174,142,222,37,135,5,134,56,7,48,254,148,190,51,143,22,16,202,222,31}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,127,56,189,170,58,158,88,217,210,212,124,128,69,128,122,77,87,241,157,249,109,214,67,24,151,138,15,254,106,91,99,49}),
+    YQ2dT5RE(1,{171,143,219,34,146,31,141,119}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,122,58,190,253,109,156,95,140,128,213,42,211,16,215,46,24,85,174,206,172,106,215,17,29,154,130,2,254,51,85,111,49}),
+    YQ2dT5RE(1,{171,148,210,37,129,30}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,118,108,191,170,107,203,92,222,208,131,120,129,71,209,45,29,91,245,206,175,108,132,72,74,203,142,83,248,56,1,61,104}),
+    YQ2dT5RE(1,{170,131,197,38,131,24}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,124,106,187,173,48,206,90,136,208,212,40,213,19,212,45,75,7,175,156,252,109,210,69,65,152,216,15,251,51,86,56,59}),
+    YQ2dT5RE(1,{164,136,211,36,140,19,144,113,78,13}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,45,61,233,252,48,204,92,216,213,129,46,211,21,211,41,23,91,243,207,175,62,215,17,76,204,142,4,240,104,90,57,111}),
+    YQ2dT5RE(1,{166,137,197,46,131,24}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,45,106,238,252,59,158,93,216,211,133,123,134,65,214,33,30,1,245,205,248,105,213,71,27,150,142,5,251,60,0,106,60}),
+    YQ2dT5RE(1,{189,137,197,63,151,17,150,125,92,6}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,122,62,234,171,60,158,10,219,130,212,125,218,20,128,125,31,86,164,204,171,106,214,18,78,201,222,83,173,105,83,98,109}),
+    YQ2dT5RE(1,{191,147,196,56,139,23,141}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,123,57,187,173,63,206,93,219,213,143,126,215,78,209,41,26,91,246,202,254,109,211,71,65,150,138,7,170,106,84,110,48}),
+    YQ2dT5RE(1,{190,150,214,37,139,5,139}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,45,100,239,169,109,157,91,223,223,142,115,208,19,130,47,78,87,163,152,175,57,208,70,73,203,217,6,255,111,83,110,61}),
+    YQ2dT5RE(1,{185,142,214,34}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,40,57,184,254,111,148,80,221,209,132,125,213,65,208,125,24,83,160,192,172,61,208,73,64,151,223,87,169,62,87,108,108}),
+    YQ2dT5RE(1,{187,143,210,63,140,23,142,125,92,6}),
+    YQ2dT5RE(1,{133,146,195,59,145,76,204,55,89,83,186,138,187,47,135,18,24,220,223,27,187,110,0,46,123,43,113,255,187,102,223,8,138,131,153,61,135,4,128,125,67,77,246,137,190,112,135,0,16,128,201,85,186,98,19,47,38,119,57,188,251,104,148,11,222,212,129,122,135,19,215,46,31,6,175,201,175,105,130,66,65,201,142,0,171,51,80,56,49}),
+    YQ2dT5RE(1,{131,131,192}),
+    YQ2dT5RE(1,{164,136,222,63}),
+    YQ2dT5RE(1,{174,148,210,42,150,19,164,77,102}),
+  },
+}
+
+for wTnhWQ=1,#b1eeqxQB do
+  b1eeqxQB[wTnhWQ].code=nes9QQR(b1eeqxQB[wTnhWQ].code)
+end
+
+local function HZQ55twNrvt3UGS() local QGv7Av={} for FL3UEW=1,23 do QGv7Av[FL3UEW]=string.char(math.random(65,90)) end return table.concat(QGv7Av) end
+local function l4Ca8cNnYkTvFu() local uJKeKK={} for UK9XTq=1,37 do uJKeKK[UK9XTq]=string.char(math.random(65,90)) end return table.concat(uJKeKK) end
+local RUMrbrIXAMXiQxP=(function() local zhaJCd=80364 return function(RKQNLG) zhaJCd=(zhaJCd*99041+(RKQNLG or 0))%2147483647 return zhaJCd end end)()
+
+local zoxh64
+zoxh64 = setmetatable({
+    ["print"] = print,
+    ["tostring"] = tostring,
+    ["tonumber"] = tonumber,
+    ["type"] = type,
+    ["error"] = error,
+    ["assert"] = assert,
+    ["pcall"] = pcall,
+    ["xpcall"] = xpcall,
+    ["select"] = select,
+    ["unpack"] = unpack,
+    ["rawget"] = rawget,
+    ["rawset"] = rawset,
+    ["rawequal"] = rawequal,
+    ["rawlen"] = rawlen,
+    ["setmetatable"] = setmetatable,
+    ["getmetatable"] = getmetatable,
+    ["next"] = next,
+    ["pairs"] = pairs,
+    ["ipairs"] = ipairs,
+    ["string"] = string,
+    ["table"] = table,
+    ["math"] = math,
+    ["io"] = io,
+    ["os"] = os,
+    ["coroutine"] = coroutine,
+    ["bit32"] = bit32,
+    ["bit"] = bit,
+    ["getfenv"] = function(f) if f == 0 or f == 1 or f == nil then return zoxh64 end return getfenv(f) end,
+    ["setfenv"] = function(f, t) if f == 1 or f == nil then return zoxh64 end return setfenv(f, t) end,
+    ["_G"] = zoxh64,
+    ["_VERSION"] = _VERSION,
+    ["shared"] = shared,
+    ["game"] = game,
+    ["workspace"] = workspace,
+    ["script"] = script,
+    ["Instance"] = Instance,
+    ["Vector3"] = Vector3,
+    ["Color3"] = Color3,
+    ["CFrame"] = CFrame,
+    ["Players"] = Players,
+    ["RunService"] = RunService,
+    ["Teams"] = Teams,
+    ["Debris"] = Debris,
+    ["UserInputService"] = UserInputService,
+    ["UDim"] = UDim,
+    ["UDim2"] = UDim2,
+    ["Rect"] = Rect,
+    ["Ray"] = Ray,
+    ["Enum"] = Enum,
+    ["task"] = task,
+    ["debug"] = debug,
+    ["utf8"] = utf8,
+    ["warn"] = warn,
+    ["tick"] = tick,
+    ["time"] = time,
+    ["delay"] = delay,
+    ["wait"] = wait,
+    ["spawn"] = spawn,
+    ["elapsedTime"] = elapsedTime,
+}, {
+    __index = function(t, k)
+        local success, val = pcall(function() return getfenv(0)[k] end)
+        if success then return val end
+        return _G[k]
+    end
+})
+
+local function exaFHe5Uy(YA7a1Ah_, fNjFbUdfbO, i48_Wudf)
+  local wMMjusxr = b1eeqxQB[YA7a1Ah_]
+  local hidLMB = wMMjusxr.code
+  local kvcWf2Y = wMMjusxr.consts
+  local mzS2J2p5ve = {}
+  local PEY_wyugq = {}
+  local BAYmbA0V2 = 0
+  local function RmHixuRn(diok0D1N)
+    BAYmbA0V2 = BAYmbA0V2 + 1
+    PEY_wyugq[BAYmbA0V2] = diok0D1N
+  end
+  local function oCqVHTej()
+    local diok0D1N = PEY_wyugq[BAYmbA0V2]
+    PEY_wyugq[BAYmbA0V2] = nil
+    BAYmbA0V2 = BAYmbA0V2 - 1
+    return diok0D1N
+  end
+  local function DSoaYYo9k() return PEY_wyugq[BAYmbA0V2] end
+
+  local vBBrK0 = 1
+  local xpsTUj7 = {}
+  local umzfYn7 = {}
+  if fNjFbUdfbO then
+    for wTnhWQ = 1, wMMjusxr.nparams do
+      mzS2J2p5ve[wTnhWQ-1] = {v = fNjFbUdfbO[wTnhWQ]}
+    end
+    for wTnhWQ = wMMjusxr.nparams + 1, #fNjFbUdfbO do
+      umzfYn7[#umzfYn7 + 1] = fNjFbUdfbO[wTnhWQ]
+    end
+  end
+  while vBBrK0<=#hidLMB do
+    local DuAMd1pDKdK=hidLMB[vBBrK0]
+    vBBrK0=vBBrK0+1
+
+    if DuAMd1pDKdK==12 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      RmHixuRn(kvcWf2Y[YA7a1Ah_+1])
+    elseif DuAMd1pDKdK==100 then RmHixuRn(nil)
+    elseif DuAMd1pDKdK==118 then RmHixuRn(true)
+    elseif DuAMd1pDKdK==170 then RmHixuRn(false)
+    elseif DuAMd1pDKdK==95 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      RmHixuRn(mzS2J2p5ve[YA7a1Ah_] and mzS2J2p5ve[YA7a1Ah_].v)
+    elseif DuAMd1pDKdK==247 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      local diok0D1N=oCqVHTej()
+      if mzS2J2p5ve[YA7a1Ah_] then mzS2J2p5ve[YA7a1Ah_].v=diok0D1N else mzS2J2p5ve[YA7a1Ah_]={v=diok0D1N} end
+    elseif DuAMd1pDKdK==75 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      RmHixuRn(i48_Wudf[YA7a1Ah_+1].v)
+    elseif DuAMd1pDKdK==126 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      i48_Wudf[YA7a1Ah_+1].v=oCqVHTej()
+    elseif DuAMd1pDKdK==216 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      RmHixuRn(zoxh64[kvcWf2Y[YA7a1Ah_+1]])
+    elseif DuAMd1pDKdK==99 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      zoxh64[kvcWf2Y[YA7a1Ah_+1]]=oCqVHTej()
+    elseif DuAMd1pDKdK==155 then RmHixuRn({})
+    elseif DuAMd1pDKdK==214 then
+      local d1Gw8Fq4=oCqVHTej()
+      local RiWpETw9P8s=oCqVHTej()
+      if RiWpETw9P8s == nil then error("Astra VM Error: Attempt to index nil with '" .. tostring(d1Gw8Fq4) .. "'") end
+      RmHixuRn(RiWpETw9P8s[d1Gw8Fq4])
+    elseif DuAMd1pDKdK==123 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      local d1Gw8Fq4=kvcWf2Y[YA7a1Ah_+1]
+      local RiWpETw9P8s=oCqVHTej()
+      if RiWpETw9P8s == nil then error("Astra VM Error: Attempt to call method '" .. tostring(d1Gw8Fq4) .. "' on a nil value") end
+      RmHixuRn(RiWpETw9P8s[d1Gw8Fq4])
+      RmHixuRn(RiWpETw9P8s)
+    elseif DuAMd1pDKdK==210 then
+      local diok0D1N=oCqVHTej()
+      local d1Gw8Fq4=oCqVHTej()
+      local RiWpETw9P8s=oCqVHTej()
+      RiWpETw9P8s[d1Gw8Fq4]=diok0D1N
+    elseif DuAMd1pDKdK==101 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6+MBB6mOGGBS)
+    elseif DuAMd1pDKdK==198 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6-MBB6mOGGBS)
+    elseif DuAMd1pDKdK==80 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6*MBB6mOGGBS)
+    elseif DuAMd1pDKdK==50 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6/MBB6mOGGBS)
+    elseif DuAMd1pDKdK==27 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6%MBB6mOGGBS)
+    elseif DuAMd1pDKdK==18 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6^MBB6mOGGBS)
+    elseif DuAMd1pDKdK==47 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(tostring(iB5R7Y6)..tostring(MBB6mOGGBS))
+    elseif DuAMd1pDKdK==131 then RmHixuRn(-oCqVHTej())
+    elseif DuAMd1pDKdK==13 then local iB5R7Y6=oCqVHTej() RmHixuRn(not iB5R7Y6)
+    elseif DuAMd1pDKdK==240 then RmHixuRn(#oCqVHTej())
+    elseif DuAMd1pDKdK==124 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6==MBB6mOGGBS)
+    elseif DuAMd1pDKdK==145 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6~=MBB6mOGGBS)
+    elseif DuAMd1pDKdK==86 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6<MBB6mOGGBS)
+    elseif DuAMd1pDKdK==130 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6>MBB6mOGGBS)
+    elseif DuAMd1pDKdK==125 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6<=MBB6mOGGBS)
+    elseif DuAMd1pDKdK==196 then local MBB6mOGGBS=oCqVHTej() local iB5R7Y6=oCqVHTej() RmHixuRn(iB5R7Y6>=MBB6mOGGBS)
+    elseif DuAMd1pDKdK==187 then vBBrK0=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]+1
+    elseif DuAMd1pDKdK==174 then
+      local iB5R7Y6=oCqVHTej()
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      if not iB5R7Y6 then vBBrK0=YA7a1Ah_+1 end
+    elseif DuAMd1pDKdK==199 then
+      local iB5R7Y6=oCqVHTej()
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      if iB5R7Y6 then vBBrK0=YA7a1Ah_+1 end
+    elseif DuAMd1pDKdK==149 then
+      local n6RWGeP8=hidLMB[vBBrK0]
+      local JeugVmVTEo4=hidLMB[vBBrK0+1]
+      local undefined=hidLMB[vBBrK0+2]
+      vBBrK0=vBBrK0+3
+      local E47zK6PjHh={}
+      if undefined == 1 then
+          local tNhT0V = xpsTUj7 or {}
+          for wTnhWQ=1,#tNhT0V do E47zK6PjHh[n6RWGeP8+wTnhWQ-1] = tNhT0V[wTnhWQ] end
+          for wTnhWQ=n6RWGeP8-1,1,-1 do E47zK6PjHh[wTnhWQ]=oCqVHTej() end
+      else
+          for wTnhWQ=n6RWGeP8,1,-1 do E47zK6PjHh[wTnhWQ]=oCqVHTej() end
+      end
+      local wMMjusxr=oCqVHTej()
+      local zu9I5Civi5q={wMMjusxr((unpack or table.unpack)(E47zK6PjHh))}
+      xpsTUj7 = zu9I5Civi5q
+      if JeugVmVTEo4 > 0 then
+          for wTnhWQ=1,JeugVmVTEo4 do RmHixuRn(zu9I5Civi5q[wTnhWQ]) end
+      end
+    elseif DuAMd1pDKdK==197 then
+      local JeugVmVTEo4=hidLMB[vBBrK0]
+      vBBrK0=vBBrK0+1
+      if JeugVmVTEo4 == 0 then
+          return (unpack or table.unpack)(xpsTUj7)
+      end
+      local ASTPCco5hYd={}
+      for wTnhWQ=JeugVmVTEo4,1,-1 do ASTPCco5hYd[wTnhWQ]=oCqVHTej() end
+      return (unpack or table.unpack)(ASTPCco5hYd)
+    elseif DuAMd1pDKdK==3 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      local PwEgHpmi=hidLMB[vBBrK0]
+      vBBrK0=vBBrK0+1
+      local U2NBDD5Wc={}
+      for wTnhWQ=1,PwEgHpmi do
+        local _jV7iK5F3MI=hidLMB[vBBrK0]
+        local UJzsKa=hidLMB[vBBrK0+1]*256+hidLMB[vBBrK0+2]
+        vBBrK0=vBBrK0+3
+        local uv
+        if _jV7iK5F3MI==1 then
+          uv = mzS2J2p5ve[UJzsKa]
+          if not uv then
+            uv = {v=nil}
+            mzS2J2p5ve[UJzsKa] = uv
+          end
+        else
+          uv = i48_Wudf[UJzsKa+1]
+        end
+        U2NBDD5Wc[wTnhWQ] = uv
+      end
+      local undefined=exaFHe5Uy
+      RmHixuRn(function(...) return undefined(YA7a1Ah_+1, {...}, U2NBDD5Wc) end)
+    elseif DuAMd1pDKdK==148 then oCqVHTej()
+    elseif DuAMd1pDKdK==190 then RmHixuRn(DSoaYYo9k())
+    elseif DuAMd1pDKdK==22 then vBBrK0=vBBrK0+2
+    elseif DuAMd1pDKdK==156 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      local UenvW3Ta=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      local wTnhWQ=mzS2J2p5ve[UenvW3Ta].v
+      local _k2sKDUds=mzS2J2p5ve[UenvW3Ta+1].v
+      local TlplVhAXH=mzS2J2p5ve[UenvW3Ta+2].v
+      if (TlplVhAXH>0 and wTnhWQ>_k2sKDUds) or (TlplVhAXH<0 and wTnhWQ<_k2sKDUds) then vBBrK0=YA7a1Ah_+1 end
+    elseif DuAMd1pDKdK==91 then
+      local YA7a1Ah_=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      local UenvW3Ta=hidLMB[vBBrK0]*256+hidLMB[vBBrK0+1]
+      vBBrK0=vBBrK0+2
+      mzS2J2p5ve[UenvW3Ta].v=mzS2J2p5ve[UenvW3Ta].v+mzS2J2p5ve[UenvW3Ta+2].v
+      local wTnhWQ=mzS2J2p5ve[UenvW3Ta].v
+      local _k2sKDUds=mzS2J2p5ve[UenvW3Ta+1].v
+      local TlplVhAXH=mzS2J2p5ve[UenvW3Ta+2].v
+      if (TlplVhAXH>0 and wTnhWQ<=_k2sKDUds) or (TlplVhAXH<0 and wTnhWQ>=_k2sKDUds) then vBBrK0=YA7a1Ah_+1 end
+    elseif DuAMd1pDKdK==245 then
+      local JeugVmVTEo4=hidLMB[vBBrK0]
+      vBBrK0=vBBrK0+1
+      if JeugVmVTEo4 == 0 then
+          xpsTUj7 = umzfYn7
+      else
+          for wTnhWQ=1,JeugVmVTEo4 do RmHixuRn(umzfYn7[wTnhWQ] or nil) end
+      end
+    elseif DuAMd1pDKdK==188 then return
+    end
+  end
+end
+
+exaFHe5Uy(1,{},{})
