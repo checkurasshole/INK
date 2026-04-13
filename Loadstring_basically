@@ -1,0 +1,9 @@
+local moduleUrl = "https://raw.githubusercontent.com/checkurasshole/INK/main/WicksModule.lua"
+local success, result = pcall(function()
+return loadstring(game:HttpGet(moduleUrl, true))()
+end)
+if success and result and result.Load then
+result.Load()
+else
+warn("WicksShop: Failed to load module")
+end
