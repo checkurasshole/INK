@@ -1,0 +1,335 @@
+local Module = {}
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+local running = true
+local wsValue = 16
+local jpValue = 50
+
+player.CharacterAdded:Connect(function(c)
+	character = c
+end)
+
+local hardcodedPositions = {
+	{
+		label  = "World 1 Highest Wins",
+		cframe = CFrame.new(1837.11731, 0.934425354, 19.0009995, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+	},
+	{
+		label  = "World 2 Highest Wins",
+		cframe = CFrame.new(4070.85547, 66.0203171, -107.346146, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+	},
+	{
+		label  = "World 3 Highest Wins",
+		cframe = CFrame.new(938.439331, 214.884476, 701.3302, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+	},
+}
+
+local allowedShopItems = {
+	"skip rebirth",
+	"dark dominus",
+	"limited offer",
+	"embers egg",
+	"angry alien egg",
+	"stage 6",
+	"toxic legend",
+}
+
+local function getFreshRootPart()
+	local char = player.Character
+	if not char then return nil end
+	return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function shortenNumber(n)
+	n = tonumber(n) or 0
+	if n >= 1e15 then return string.format("%.0fQd", n / 1e15)
+	elseif n >= 1e12 then return string.format("%.0fT",  n / 1e12)
+	elseif n >= 1e9  then return string.format("%.0fB",  n / 1e9)
+	elseif n >= 1e6  then return string.format("%.0fM",  n / 1e6)
+	elseif n >= 1e3  then return string.format("%.0fK",  n / 1e3)
+	else return tostring(math.floor(n))
+	end
+end
+
+local function getObjectCFrame(obj)
+	if obj:IsA("Model") then
+		if obj.PrimaryPart then return obj.PrimaryPart.CFrame end
+		for _, part in ipairs(obj:GetDescendants()) do
+			if part:IsA("BasePart") then return part.CFrame end
+		end
+	elseif obj:IsA("BasePart") then
+		return obj.CFrame
+	end
+	return nil
+end
+
+local function teleportToObject(obj)
+	local cf = getObjectCFrame(obj)
+	local root = getFreshRootPart()
+	if cf and root then
+		root.CFrame = cf + Vector3.new(0, 5, 0)
+	end
+end
+
+local function teleportToCFrame(cf)
+	local root = getFreshRootPart()
+	if root then
+		root.CFrame = cf + Vector3.new(0, 5, 0)
+	end
+end
+
+local function isAllowedShopItem(name)
+	local lower = name:lower()
+	for _, allowed in ipairs(allowedShopItems) do
+		if lower:find(allowed, 1, true) then return true end
+	end
+	return false
+end
+
+local function makeStealthFire(code)
+	pcall(function()
+		local Visit = (cloneref or function(x) return x end)(game:GetService("Visit"))
+		local setthreadidentity = set_thread_identity or setthreadcaps or setthreadidentity
+		local clonefunction = clonefunc or clonefunction or function(f) return f end
+		if clonefunction and setthreadidentity then
+			getrenv()._set = clonefunction(setthreadidentity)
+		end
+		local old_hook
+		old_hook = hookmetamethod(game, "__index", function(a, b)
+			task.spawn(function()
+				if getrenv()._set then getrenv()._set(7) end
+				task.wait(0.1)
+				local ls, fn = pcall(loadstring, code)
+				if ls and fn then pcall(fn) end
+				Instance.new("LocalScript").Parent = Visit
+			end)
+			hookmetamethod(game, "__index", old_hook)
+			return old_hook(a, b)
+		end)
+	end)
+end
+
+local function fetchDevProducts()
+	local dnames = {}
+	local dproductIds = {}
+	pcall(function()
+		local pages = MarketplaceService:GetDeveloperProductsAsync()
+		while true do
+			for _, dp in ipairs(pages:GetCurrentPage()) do
+				local n  = dp.Name      or dp.name
+				local id = dp.ProductId or dp.productId
+				if n and id then
+					table.insert(dnames, n)
+					table.insert(dproductIds, id)
+				end
+			end
+			if pages.IsFinished then break end
+			pages:AdvanceToNextPageAsync()
+		end
+	end)
+	if #dnames == 0 then
+		pcall(function()
+			local cursor = nil
+			repeat
+				local url = "https://games.roblox.com/v1/games/" .. tostring(game.GameId)
+					.. "/developer-products?limit=100&sortOrder=Asc"
+				if cursor and cursor ~= "" then
+					url = url .. "&cursor=" .. HttpService:UrlEncode(cursor)
+				end
+				local raw
+				local s1, r1 = pcall(function() return game:GetService("HttpRbxApiService"):GetAsync(url, true) end)
+				raw = (s1 and r1 and r1 ~= "") and r1 or game:HttpGet(url)
+				local jok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
+				if not jok then decoded = nil end
+				local list = decoded and (decoded.data or decoded.developerProducts)
+				if list then
+					for _, dp in ipairs(list) do
+						local n  = dp.name      or dp.Name
+						local id = dp.productId or dp.ProductId
+						if n and id then
+							table.insert(dnames, n)
+							table.insert(dproductIds, id)
+						end
+					end
+				end
+				local nc = decoded and decoded.nextPageCursor
+				cursor = (nc and nc ~= "") and nc or nil
+			until not cursor
+		end)
+	end
+	return dnames, dproductIds
+end
+
+local function fetchGamepasses()
+	local gnames = {}
+	local gproductIds = {}
+	pcall(function()
+		local data = HttpService:JSONDecode(
+			game:HttpGet("https://games.roblox.com/v1/games/" .. game.GameId .. "/game-passes?limit=100&sortOrder=Asc")
+		)
+		if data and data.data then
+			for _, v in pairs(data.data) do
+				table.insert(gnames, v.name)
+				table.insert(gproductIds, v.id)
+			end
+		end
+	end)
+	return gnames, gproductIds
+end
+
+function Module.setWalkSpeed(v) wsValue = v end
+function Module.setJumpPower(v) jpValue = v end
+function Module.stop() running = false end
+
+function Module.startMovementLoop()
+	RunService.RenderStepped:Connect(function()
+		if not running then return end
+		local char = player.Character
+		local hum = char and char:FindFirstChild("Humanoid")
+		if hum then
+			hum.WalkSpeed = wsValue
+			hum.JumpPower = jpValue
+		end
+	end)
+end
+
+function Module.startBoostLoop(Toggles)
+	task.spawn(function()
+		while running do
+			task.wait(0.05)
+			local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+			if Toggles.InfHealthToggle.Value and remotes and remotes:FindFirstChild("TakeDamage") then
+				pcall(function() remotes.TakeDamage:FireServer(-999e999) end)
+			end
+			if Toggles.AutoClickToggle.Value and remotes and remotes:FindFirstChild("MHP") then
+				pcall(function() remotes.MHP:FireServer() end)
+			end
+			if Toggles.RebirthToggle.Value and ReplicatedStorage:FindFirstChild("RebirthRemote") then
+				pcall(function() ReplicatedStorage.RebirthRemote:FireServer() end)
+			end
+			if Toggles.InfSpinsToggle.Value then
+				local spinRemote = ReplicatedStorage:FindFirstChild("Remotes")
+					and ReplicatedStorage.Remotes:FindFirstChild("AddSpin")
+				if spinRemote then
+					pcall(function() spinRemote:FireServer() end)
+				end
+			end
+		end
+	end)
+end
+
+function Module.buildTeleportToggles(TeleGroup, Toggles)
+	local teleportToggles   = {}
+	local toggleCounter     = 0
+	local registeredButtons = {}
+
+	for i, entry in ipairs(hardcodedPositions) do
+		local safeName = "HardTele_" .. i
+		TeleGroup:AddToggle(safeName, {
+			Text    = entry.label,
+			Default = false,
+		})
+		teleportToggles[safeName] = { __hardcoded = true, cframe = entry.cframe }
+	end
+
+	local function registerButton(obj)
+		local winsObj = obj:FindFirstChild("Wins")
+		if not winsObj then return end
+		local winsVal = tonumber(winsObj.Value)
+		if not winsVal then return end
+		if obj.Name:lower():find("premium") then return end
+		local key = tostring(obj)
+		if registeredButtons[key] then return end
+		registeredButtons[key] = true
+		toggleCounter = toggleCounter + 1
+		local safeName = "Tele_" .. toggleCounter
+		TeleGroup:AddToggle(safeName, {
+			Text    = "#" .. toggleCounter .. " [" .. shortenNumber(winsVal) .. " wins]",
+			Default = false,
+		})
+		teleportToggles[safeName] = obj
+	end
+
+	task.spawn(function()
+		local buttonsFolder = workspace:FindFirstChild("Buttons")
+			or workspace:WaitForChild("Buttons", 60)
+		if not buttonsFolder then
+			TeleGroup:AddLabel("workspace.Buttons not found.")
+			return
+		end
+		local buttonList = {}
+		for _, obj in ipairs(buttonsFolder:GetChildren()) do
+			local winsObj = obj:FindFirstChild("Wins")
+			local winsVal = winsObj and tonumber(winsObj.Value) or 0
+			table.insert(buttonList, { obj = obj, wins = winsVal })
+		end
+		table.sort(buttonList, function(a, b) return a.wins < b.wins end)
+		for _, entry in ipairs(buttonList) do
+			registerButton(entry.obj)
+		end
+		buttonsFolder.ChildAdded:Connect(function(child)
+			task.wait(1.5)
+			registerButton(child)
+		end)
+	end)
+
+	task.spawn(function()
+		while running do
+			task.wait(0.1)
+			for safeName, obj in pairs(teleportToggles) do
+				if Toggles[safeName] and Toggles[safeName].Value then
+					if obj.__hardcoded then
+						teleportToCFrame(obj.cframe)
+					else
+						teleportToObject(obj)
+					end
+				end
+			end
+		end
+	end)
+end
+
+function Module.buildShop(ShopGroup)
+	local dnames, dproductIds = fetchDevProducts()
+	local gnames, gproductIds = fetchGamepasses()
+
+	ShopGroup:AddDivider()
+
+	if #dnames == 0 then
+		ShopGroup:AddLabel("No items found.")
+	else
+		for i, name in ipairs(dnames) do
+			local id = dproductIds[i]
+			if isAllowedShopItem(name) then
+				ShopGroup:AddButton({
+					Text = name,
+					Func = function()
+						makeStealthFire("game:GetService('MarketplaceService'):SignalPromptProductPurchaseFinished(game.Players.LocalPlayer.UserId, " .. tostring(id) .. ", true)")
+					end,
+				})
+			end
+		end
+	end
+
+	for i, name in ipairs(gnames) do
+		local id = gproductIds[i]
+		if isAllowedShopItem(name) then
+			ShopGroup:AddButton({
+				Text = name,
+				Func = function()
+					makeStealthFire("game:GetService('MarketplaceService'):SignalPromptGamePassPurchaseFinished(game.Players.LocalPlayer, " .. tostring(id) .. ", true)")
+				end,
+			})
+		end
+	end
+end
+
+return Module
