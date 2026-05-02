@@ -1,14 +1,21 @@
--- INK: simple executor script
--- Paste into your executor, or load it with loadstring(game:HttpGet(...))()
+-- INK: hi-executor.lua
+-- Simple executor-friendly test script.
 
--- Basic print (shows in executor console)
+local function notify(title, text, duration)
+    local ok, err = pcall(function()
+        local StarterGui = game:GetService("StarterGui")
+        StarterGui:SetCore("SendNotification", {
+            Title = tostring(title or "INK"),
+            Text = tostring(text or "hi"),
+            Duration = tonumber(duration) or 5,
+        })
+    end)
+
+    if not ok then
+        -- Fallback to console only if notifications are blocked
+        warn("[INK] Notification failed: ", err)
+    end
+end
+
 print("hi")
-
--- Also show an in-game notification (works in most Roblox executors)
-pcall(function()
-	game:GetService("StarterGui"):SetCore("SendNotification", {
-		Title = "INK",
-		Text = "hi",
-		Duration = 3
-	})
-end)
+notify("INK", "hi", 5)
