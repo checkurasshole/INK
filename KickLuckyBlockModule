@@ -1,0 +1,698 @@
+local Module = {}
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+local Net = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Packages"):WaitForChild("Network")
+
+local RarityData   = require(ReplicatedStorage.Shared.Data.RarityData)
+local EntitiesData = require(ReplicatedStorage.Shared.Data.EntitiesData)
+local MutationData = require(ReplicatedStorage.Shared.Data.MutationData)
+
+Module.RARITY_PRIORITY = {
+    Common=1, Rare=2, Epic=3, Legendary=4, Mythic=5,
+    Godly=6, Secret=7, Rainbow=8, Hacked=9, Demon=10, Celestial=11,
+}
+Module.RARITY_LIST = {
+    "Common","Rare","Epic","Legendary","Mythic",
+    "Celestial","Hacked","Rainbow / Divine",
+    "OG / Demon","Secret","Godly","Exclusive",
+}
+Module.KICK_VALUES = { Perfect=1, Excellent=0.867, Great=0.635, Mid=0.264, Bad=0.067 }
+Module.ZONE_NAMES  = { "Mythic","Godly","OG","Celestial","Shadow","Divine","Hacked","Exclusive" }
+Module.KNOWN_MUTATIONS = {
+    "golden","diamond","plasma","molten","radioactive",
+    "shadow","electrified","rainbow","virus","void",
+    "disco","galaxy","heavenly",
+}
+
+Module.MUTATIONS = {}
+local mutVFX = ReplicatedStorage:FindFirstChild("Objects")
+    and ReplicatedStorage.Objects:FindFirstChild("VFX")
+    and ReplicatedStorage.Objects.VFX:FindFirstChild("MutationVFX")
+if mutVFX then
+    for _, c in pairs(mutVFX:GetChildren()) do
+        Module.MUTATIONS[c.Name:lower()] = c.Name
+    end
+end
+
+Module.MUTATION_LIST = { "Normal" }
+for _, v in pairs(Module.MUTATIONS) do table.insert(Module.MUTATION_LIST, v) end
+if #Module.MUTATION_LIST == 1 then
+    for _, n in ipairs({
+        "Golden","Diamond","Plasma","Molten","Radioactive",
+        "Shadow","Electrified","Rainbow","Virus","Void",
+        "Disco","Galaxy","Heavenly",
+    }) do
+        table.insert(Module.MUTATION_LIST, n)
+        Module.MUTATIONS[n:lower()] = n
+    end
+end
+
+Module.State = {
+    KickMode         = "Perfect",
+    AutoKick         = false,
+    AutoRebirth      = false,
+    AutoCollect      = false,
+    AutoBuySpeed     = false,
+    AutoTrain        = false,
+    InstantTouch     = false,
+    AutoUpgrade      = false,
+    TargetUpgrade    = 1,
+    ZoneFilter       = {},
+    KeepMutFilter    = {},
+    KeepRarityFilter = {},
+    JumpPower        = 50,
+    InfiniteJump     = false,
+    Noclip           = false,
+    AntiAFK          = false,
+    FOV              = 70,
+    PotatoMode       = false,
+    AutoRefreshSlots = true,
+    OofLooping       = false,
+}
+
+Module.DiscordState = {
+    WebhookURL      = "",
+    Enabled         = false,
+    NotifyRarities  = {},
+    NotifyMutations = {},
+    Cooldown        = 10,
+}
+
+local lastNotified   = {}
+local hooked         = {}
+local tickID         = 0
+local lastPrediction = { name=nil, mutation=nil, rarity=nil, cash=nil }
+local lockedPlot     = nil
+local infiniteJumpConn = nil
+local noclipConn       = nil
+local antiAFKConn      = nil
+local originalProperties = {}
+local scannedSlots   = {}
+
+Module.scannedSlots  = scannedSlots
+Module.lastPrediction = lastPrediction
+Module.kickCount     = 0
+Module.upgradeDropdown = nil
+Module.LabelName     = nil
+Module.LabelMut      = nil
+Module.LabelRar      = nil
+Module.LabelCash     = nil
+Module.LabelCount    = nil
+
+local State        = Module.State
+local DiscordState = Module.DiscordState
+local MUTATIONS    = Module.MUTATIONS
+local KNOWN_MUTATIONS = Module.KNOWN_MUTATIONS
+local KICK_VALUES  = Module.KICK_VALUES
+local RARITY_PRIORITY = Module.RARITY_PRIORITY
+
+function Module.getRarity(name)
+    local bestRarity, bestPriority = "Unknown", math.huge
+    for rarity, pool in pairs(RarityData.BrainrotPool) do
+        if type(pool) == "table" then
+            for _, entry in pairs(pool) do
+                if type(entry) == "table" and entry.Name == name then
+                    local p = RARITY_PRIORITY[rarity] or math.huge
+                    if p < bestPriority then bestPriority = p; bestRarity = rarity end
+                end
+            end
+        end
+    end
+    return bestRarity
+end
+
+function Module.getCash(name, mutation)
+    local ok, base = pcall(function() return EntitiesData.GetCostForUpgrade(name, 1) end)
+    if ok and base then
+        local mult = 1
+        if mutation ~= "None" then
+            local ok2, buff = pcall(function() return MutationData.Buffs[mutation].Value end)
+            if ok2 and buff then mult = buff end
+        end
+        return tostring(base * mult) .. "/s"
+    end
+    return "Unknown"
+end
+
+function Module.ForcedTP(cf)
+    local char = player.Character
+    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.Velocity = Vector3.new(0,0,0); hrp.CFrame = cf end
+end
+
+function Module.getMyPlot()
+    for _, plot in pairs(workspace.Plots:GetChildren()) do
+        local dec = plot:FindFirstChild("Decorations")
+        if dec then
+            local po = dec:FindFirstChild("PlotOwner")
+            if po then
+                local g = po:FindFirstChild("OwnerGUI")
+                if g then
+                    local tl = g:FindFirstChild("TextLabel")
+                    if tl and (tl.Text == player.Name or tl.Text == player.DisplayName) then
+                        return plot
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function hasAnyActive(t)
+    if not t then return false end
+    for _, v in pairs(t) do if v then return true end end
+    return false
+end
+
+function Module.mutationPassesKeep(pet)
+    local f = State.KeepMutFilter
+    if not hasAnyActive(f) then return true end
+    for name, active in pairs(f) do
+        if active then
+            if name == "Normal" then
+                local hasMut = false
+                for _, desc in pairs(pet:GetDescendants()) do
+                    for _, m in ipairs(KNOWN_MUTATIONS) do
+                        if string.find(desc.Name:lower(), m) then hasMut = true; break end
+                    end
+                    if hasMut then break end
+                end
+                if not hasMut then return true end
+            else
+                for _, desc in pairs(pet:GetDescendants()) do
+                    if string.find(desc.Name:lower(), name:lower()) then return true end
+                end
+            end
+        end
+    end
+    return false
+end
+
+function Module.rarityPassesKeep(rarity)
+    local f = State.KeepRarityFilter
+    if not hasAnyActive(f) then return true end
+    for name, active in pairs(f) do
+        if active then
+            if name == "Rainbow / Divine" then
+                if rarity and (rarity:lower() == "rainbow" or rarity:lower() == "divine") then return true end
+            elseif name == "OG / Demon" then
+                if rarity and (rarity:lower() == "og" or rarity:lower() == "demon") then return true end
+            elseif rarity and rarity:lower() == name:lower() then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function smoothFlyTo(hrp, hum, targetPos)
+    local target = Vector3.new(targetPos.X, 3, targetPos.Z)
+    hrp.Anchored = true
+    while hrp and hum and hum.Health > 0 do
+        local dt  = task.wait()
+        local pos = hrp.Position
+        local dir = (target - pos)
+        if dir.Magnitude < 2 then hrp.CFrame = CFrame.new(target); break end
+        local speed    = math.max(hum.WalkSpeed, 80)
+        local moveDist = math.min(speed * dt, dir.Magnitude)
+        hrp.CFrame = CFrame.new(pos + dir.Unit * moveDist)
+    end
+    if hrp and hrp.Parent then hrp.Anchored = false end
+end
+
+function Module.getPetMutation(pet)
+    for _, child in pairs(pet:GetChildren()) do
+        if MUTATIONS[child.Name:lower()] then
+            return MUTATIONS[child.Name:lower()]
+        end
+    end
+    return nil
+end
+
+function Module.slotHasPet(myPlot, slotIndex)
+    if not myPlot then return false end
+    local slots = myPlot:FindFirstChild("Slots")
+    if not slots then return false end
+    local slot = slots:FindFirstChild("Slot" .. slotIndex)
+    if not slot then return false end
+    local placed = slot:FindFirstChild("PlacedPart")
+    if not placed then return false end
+    for _, child in pairs(placed:GetChildren()) do
+        if child:IsA("Model") then return true end
+    end
+    return false
+end
+
+function Module.buildSlotLabel(s)
+    local mut = s.mutation and (" ["..s.mutation.."]") or ""
+    return "Slot "..s.index..": "..s.petName..mut
+end
+
+function Module.scanSlots()
+    if not State.AutoRefreshSlots then return end
+    scannedSlots = {}
+    Module.scannedSlots = scannedSlots
+    local myPlot = Module.getMyPlot()
+    if not myPlot then return end
+    local slots = myPlot:FindFirstChild("Slots")
+    if not slots then return end
+    for i = 1, 30 do
+        local slot = slots:FindFirstChild("Slot"..i)
+        if slot then
+            local placed = slot:FindFirstChild("PlacedPart")
+            if placed then
+                for _, pet in pairs(placed:GetChildren()) do
+                    if pet:IsA("Model") then
+                        local mut = Module.getPetMutation(pet)
+                        table.insert(scannedSlots, {
+                            index    = i,
+                            petName  = pet.Name,
+                            mutation = mut,
+                        })
+                    end
+                end
+            end
+        end
+    end
+    if Module.upgradeDropdown then
+        local newValues = {}
+        for _, s in ipairs(scannedSlots) do
+            table.insert(newValues, Module.buildSlotLabel(s))
+        end
+        if #newValues == 0 then newValues = { "No pets found" } end
+        Module.upgradeDropdown:SetValues(newValues)
+        if State.TargetUpgrade == 1 and scannedSlots[1] then
+            Module.upgradeDropdown:SetValue(newValues[1])
+            State.TargetUpgrade = scannedSlots[1].index
+        end
+    end
+end
+
+task.spawn(function()
+    task.wait(2)
+    pcall(Module.scanSlots)
+    while true do
+        task.wait(5)
+        pcall(Module.scanSlots)
+    end
+end)
+
+function Module.startOofLoop()
+    if State.OofLooping then return end
+    State.OofLooping = true
+    task.spawn(function()
+        while State.OofLooping do
+            pcall(function()
+                local char = player.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root and root.Anchored then root.Anchored = false end
+                for _, v in pairs(Players:GetPlayers()) do
+                    if v.Character and v.Character:FindFirstChild("Head") then
+                        for _, x in pairs(v.Character.Head:GetChildren()) do
+                            if x:IsA("Sound") then
+                                pcall(function() x.Playing = true end)
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.1)
+        end
+    end)
+end
+
+function Module.stopOofLoop()
+    State.OofLooping = false
+end
+
+function Module.startAutoKick()
+    tickID += 1
+    local id = tickID
+    task.spawn(function()
+        while State.AutoKick and id == tickID do
+            pcall(function()
+                local char = player.Character
+                local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+                local hum  = char and char:FindFirstChild("Humanoid")
+                if not (hrp and hum and hum.Health > 0) then return end
+                local kickPos = workspace:FindFirstChild("Areas") and workspace.Areas:FindFirstChild("KickReady")
+                if not kickPos then return end
+                local kickCF = kickPos:IsA("BasePart") and kickPos.CFrame or kickPos:GetPivot()
+                Module.ForcedTP(kickCF + Vector3.new(0, 3, 0))
+                task.wait(0.5)
+                lastPrediction = { name=nil, mutation=nil, rarity=nil, cash=nil }
+                Module.lastPrediction = lastPrediction
+                local startPos      = hrp.Position
+                local wasTeleported = false
+                local HUD           = PlayerGui:FindFirstChild("HUD")
+                for _ = 1, 150 do
+                    task.wait(0.1)
+                    if not char or not char.Parent or hum.Health <= 0 then return end
+                    if (hrp.Position - startPos).Magnitude > 40 then wasTeleported = true; break end
+                    local KB = HUD and HUD:FindFirstChild("KickButton")
+                    if KB and KB.Visible then
+                        Net.rev_KickEvent:FireServer(KICK_VALUES[State.KickMode] or 1)
+                        task.wait(0.5)
+                    end
+                end
+                if not wasTeleported then return end
+                task.wait(0.8)
+                local spawnedMonster = nil
+                for _ = 1, 40 do
+                    task.wait(0.2)
+                    local best = 60
+                    for _, obj in pairs(workspace.Debris:GetChildren()) do
+                        if obj:IsA("Model") and obj.PrimaryPart then
+                            local d = (obj.PrimaryPart.Position - hrp.Position).Magnitude
+                            if d < best then best = d; spawnedMonster = obj end
+                        end
+                    end
+                    if spawnedMonster then break end
+                end
+                if not spawnedMonster then return end
+                task.wait(0.5)
+                local mutOk  = Module.mutationPassesKeep(spawnedMonster)
+                local rarity = lastPrediction.rarity
+                if not rarity or rarity == "Unknown" then
+                    local nameToCheck = (lastPrediction.name and lastPrediction.name ~= "Unknown")
+                        and lastPrediction.name or spawnedMonster.Name
+                    rarity = Module.getRarity(nameToCheck)
+                end
+                local rarityOk = Module.rarityPassesKeep(rarity)
+                local zoneOk = true
+                if State.ZoneFilter and next(State.ZoneFilter) ~= nil then
+                    zoneOk = false
+                    for zone, active in pairs(State.ZoneFilter) do
+                        if active then
+                            local z = workspace:FindFirstChild("Areas") and workspace.Areas:FindFirstChild(zone)
+                            if z then zoneOk = true; break end
+                        end
+                    end
+                end
+                if mutOk and rarityOk and zoneOk then
+                    smoothFlyTo(hrp, hum, kickCF.Position)
+                end
+            end)
+            task.wait(0.4)
+        end
+    end)
+end
+
+function Module.startAutoCollect()
+    task.spawn(function()
+        local char = player.Character
+        local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+        if not lockedPlot and hrp then
+            local closestDist = math.huge
+            for _, plot in pairs(workspace:WaitForChild("Plots"):GetChildren()) do
+                if plot:IsA("Model") or plot:IsA("Folder") then
+                    local d = (hrp.Position - plot:GetPivot().Position).Magnitude
+                    if d < closestDist then closestDist = d; lockedPlot = plot end
+                end
+            end
+        end
+        while State.AutoCollect do
+            pcall(function()
+                if not lockedPlot then return end
+                local buttonsFolder = lockedPlot:FindFirstChild("Buttons")
+                if not buttonsFolder then return end
+                for i = 1, 30 do
+                    if not State.AutoCollect then break end
+                    if not Module.slotHasPet(lockedPlot, i) then continue end
+                    local slotPart = buttonsFolder:FindFirstChild("Slot" .. i)
+                    if slotPart then
+                        local targetCF
+                        if slotPart:IsA("BasePart") then
+                            targetCF = slotPart.CFrame
+                        elseif slotPart:IsA("Model") and slotPart.PrimaryPart then
+                            targetCF = slotPart.PrimaryPart.CFrame
+                        elseif slotPart:FindFirstChildWhichIsA("BasePart") then
+                            targetCF = slotPart:FindFirstChildWhichIsA("BasePart").CFrame
+                        end
+                        if targetCF then
+                            Module.ForcedTP(targetCF + Vector3.new(0, 1.5, 0))
+                            task.wait(0.1)
+                            Net.rev_B_Collect:FireServer(i)
+                        end
+                    end
+                end
+            end)
+            task.wait(1.5)
+        end
+    end)
+end
+
+function Module.applyJumpPower(val)
+    local char = player.Character
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.JumpPower = val; hum.UseJumpPower = true end
+end
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    local hum = char:WaitForChild("Humanoid")
+    if hum then
+        hum.JumpPower    = State.JumpPower
+        hum.UseJumpPower = true
+    end
+end)
+
+function Module.enableInfiniteJump()
+    if infiniteJumpConn then return end
+    infiniteJumpConn = UserInputService.JumpRequest:Connect(function()
+        local char = player.Character
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end)
+end
+
+function Module.disableInfiniteJump()
+    if infiniteJumpConn then infiniteJumpConn:Disconnect(); infiniteJumpConn = nil end
+end
+
+function Module.enableNoclip()
+    if noclipConn then return end
+    noclipConn = RunService.Stepped:Connect(function()
+        local char = player.Character
+        if not char then return end
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end)
+end
+
+function Module.disableNoclip()
+    if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+    local char = player.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end
+end
+
+function Module.enableAntiAFK()
+    if getconnections then
+        pcall(function()
+            for _, connection in pairs(getconnections(player.Idled)) do
+                if connection["Disable"] then
+                    connection["Disable"](connection)
+                elseif connection["Disconnect"] then
+                    connection["Disconnect"](connection)
+                end
+            end
+        end)
+    end
+    if not antiAFKConn then
+        antiAFKConn = player.Idled:Connect(function()
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+        end)
+    end
+end
+
+function Module.disableAntiAFK()
+    if antiAFKConn then antiAFKConn:Disconnect(); antiAFKConn = nil end
+end
+
+function Module.enablePotatoMode()
+    originalProperties = {
+        GlobalShadows = Lighting.GlobalShadows,
+        FogEnd        = Lighting.FogEnd,
+        Brightness    = Lighting.Brightness,
+    }
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd        = 9e9
+    Lighting.Brightness    = 1
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("Atmosphere") or effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect")
+        or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("BloomEffect") then
+            effect.Enabled = false
+        end
+    end
+    pcall(function() workspace.Terrain.Decoration = false end)
+end
+
+function Module.disablePotatoMode()
+    if originalProperties.GlobalShadows ~= nil then
+        Lighting.GlobalShadows = originalProperties.GlobalShadows
+        Lighting.FogEnd        = originalProperties.FogEnd
+        Lighting.Brightness    = originalProperties.Brightness
+    end
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("Atmosphere") or effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect")
+        or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("BloomEffect") then
+            effect.Enabled = true
+        end
+    end
+    pcall(function() workspace.Terrain.Decoration = true end)
+end
+
+function Module.sendDiscordNotification(name, mutation, rarity)
+    if not DiscordState.Enabled then return end
+    if not DiscordState.WebhookURL or DiscordState.WebhookURL == "" then return end
+    local key = (name or "?") .. "|" .. (mutation or "None") .. "|" .. (rarity or "?")
+    local now = tick()
+    if lastNotified[key] and (now - lastNotified[key]) < DiscordState.Cooldown then return end
+    local shouldNotify = false
+    local rarityActive = false
+    for _, active in pairs(DiscordState.NotifyRarities) do
+        if active then rarityActive = true; break end
+    end
+    local mutActive = false
+    for _, active in pairs(DiscordState.NotifyMutations) do
+        if active then mutActive = true; break end
+    end
+    if not rarityActive and not mutActive then return end
+    if rarityActive then
+        for rName, active in pairs(DiscordState.NotifyRarities) do
+            if active then
+                if rName == "Rainbow / Divine" then
+                    if rarity and (rarity:lower() == "rainbow" or rarity:lower() == "divine") then shouldNotify = true end
+                elseif rName == "OG / Demon" then
+                    if rarity and (rarity:lower() == "og" or rarity:lower() == "demon") then shouldNotify = true end
+                elseif rarity and rarity:lower() == rName:lower() then
+                    shouldNotify = true
+                end
+            end
+        end
+    end
+    if mutActive then
+        for mName, active in pairs(DiscordState.NotifyMutations) do
+            if active then
+                if mName == "Normal" then
+                    if not mutation or mutation == "None" then shouldNotify = true end
+                elseif mutation and mutation:lower() == mName:lower() then
+                    shouldNotify = true
+                end
+            end
+        end
+    end
+    if not shouldNotify then return end
+    lastNotified[key] = now
+    local displayRarity = rarity or "Unknown"
+    if displayRarity:lower() == "rainbow" or displayRarity:lower() == "divine" then
+        displayRarity = "Rainbow / Divine"
+    elseif displayRarity:lower() == "og" or displayRarity:lower() == "demon" then
+        displayRarity = "OG / Demon"
+    end
+    local message = string.format(
+        "@everyone\n🚨 **Pet Found!**\n🐾 **Name:** %s\n✨ **Mutation:** %s\n⭐ **Rarity:** %s\n👤 **Player:** %s",
+        name or "Unknown",
+        mutation or "None",
+        displayRarity,
+        player.Name
+    )
+    pcall(function()
+        request({
+            Url     = DiscordState.WebhookURL,
+            Method  = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body    = HttpService:JSONEncode({ content = message, username = "COMBOWICK Alert" }),
+        })
+    end)
+end
+
+function Module.updateKickPanel(name, mutation, rarity, cash)
+    if Module.LabelName then Module.LabelName:SetText(name ~= "Unknown" and ("Name: "..name) or "Name: —") end
+    if Module.LabelMut  then Module.LabelMut:SetText("Mutation: "..(mutation or "None")) end
+    local displayRarity = rarity or "Unknown"
+    if displayRarity:lower() == "rainbow" or displayRarity:lower() == "divine" then
+        displayRarity = "Rainbow / Divine"
+    elseif displayRarity:lower() == "og" or displayRarity:lower() == "demon" then
+        displayRarity = "OG / Demon"
+    end
+    if Module.LabelRar  then Module.LabelRar:SetText("Rarity: "..displayRarity) end
+    if Module.LabelCash then Module.LabelCash:SetText("Cash: $"..(cash or "Unknown")) end
+    Module.kickCount += 1
+    if Module.LabelCount then Module.LabelCount:SetText("Kicks: "..Module.kickCount) end
+    pcall(function()
+        Module.sendDiscordNotification(name, mutation, rarity)
+    end)
+end
+
+function Module.getCashRaw(name, level, mutation)
+    local ok, base = pcall(EntitiesData.GetCostForUpgrade, name, 1)
+    if not ok or not base then return nil end
+    local levelMult = EntitiesData.CachedMultipliers[level] or 1
+    local mutMult = 1
+    if mutation and mutation ~= "None" then
+        local ok2, buff = pcall(function() return MutationData.Buffs[mutation].Value end)
+        if ok2 and buff then mutMult = buff end
+    end
+    local ok3, result = pcall(function() return base * levelMult * mutMult end)
+    return ok3 and result or nil
+end
+
+function Module.watchKickEvent(remote)
+    remote.OnClientEvent:Connect(function(...)
+        local args         = { ... }
+        local mutationData = args[2]
+        local name, mutation, rarity, cash = "Unknown","None","Unknown","Unknown"
+        pcall(function() name     = tostring(mutationData.Name)     end)
+        pcall(function() mutation = tostring(mutationData.Mutation) end)
+        pcall(function() rarity   = Module.getRarity(name)          end)
+        pcall(function() cash     = Module.getCash(name, mutation)   end)
+        lastPrediction = { name=name, mutation=mutation, rarity=rarity, cash=cash }
+        Module.lastPrediction = lastPrediction
+        Module.updateKickPanel(name, mutation, rarity, cash)
+    end)
+end
+
+function Module.hookRemotes()
+    local function findAndHook(parent)
+        for _, v in pairs(parent:GetDescendants()) do
+            if v.ClassName == "RemoteEvent" and v.Name == "rev_KickEvent" and not hooked[v] then
+                hooked[v] = true
+                Module.watchKickEvent(v)
+            end
+        end
+    end
+    findAndHook(ReplicatedStorage)
+    findAndHook(workspace)
+end
+
+Module.Net = Net
+Module.validWeights = {
+    ["Wooden Stick"]=true, ["Copper Plate"]=true, ["Stone Block"]=true,
+    ["Bone Barbell"]=true, ["Donut Barbell"]=true, ["Ice Barbell"]=true,
+    ["Iron Plate"]=true, ["Heaven Plate"]=true, ["Gold Barbell"]=true,
+    ["Golden Barbell"]=true, ["Giant Gold Star Barbell"]=true,
+    ["Neon Pulse"]=true, ["Mega Gold Barbell"]=true, ["Mega Golden Barbell"]=true,
+}
+Module.player    = player
+Module.PlayerGui = PlayerGui
+Module.Players   = Players
+
+return Module
