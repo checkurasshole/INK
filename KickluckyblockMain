@@ -1,0 +1,27 @@
+-- Main Script - Language Selector
+local LanguageSelector = loadstring(game:HttpGet("https://raw.githubusercontent.com/uyh505-eng/published-content-jycoui/refs/heads/main/yeshhhh"))()
+
+-- Script links for each language
+local scripts = {
+    ["English"] = "https://v0-supabase-secure-storage.vercel.app/api/script/21d4e8bb87ae33ed465e3d6f7749d885",
+    ["Chinese (Simplified)"] = "https://v0-supabase-secure-storage.vercel.app/api/script/4032dc0a1d0bb621fb889514a61f9eac",
+    ["Filipino"] = "https://v0-supabase-secure-storage.vercel.app/api/script/6565fd08f90b0a915e5e87aa0914a1c8",
+    ["French"] = "https://v0-supabase-secure-storage.vercel.app/api/script/887e74ad739e0f42ac05143c3135967a",
+    ["German"] = "https://v0-supabase-secure-storage.vercel.app/api/script/7547c69e3f606af037a70582d422b414",
+    ["Indonesian"] = "https://v0-supabase-secure-storage.vercel.app/api/script/7bb7c9bc3659bc451c30e4fd7c234f20",
+    ["Korean"] = "https://v0-supabase-secure-storage.vercel.app/api/script/a6cdf913e6d8473f3aac92ef8541701a",
+    ["Portuguese"] = "https://v0-supabase-secure-storage.vercel.app/api/script/89733be970adc0fbdaa748b2e0d29d29",
+    ["Russian"] = "https://v0-supabase-secure-storage.vercel.app/api/script/536e8cb75cedd0f30e1f01db28da227b",
+    ["Spanish"] = "https://v0-supabase-secure-storage.vercel.app/api/script/6c52de83826cf9e4a619dacc1a5fd58e",
+    ["Thai"] = "https://v0-supabase-secure-storage.vercel.app/api/script/9572140bf50a9004ba6c4177aee8f91b",
+    ["Vietnamese"] = "https://v0-supabase-secure-storage.vercel.app/api/script/3b4e4083f85e240840f486104b766063"
+}
+
+-- Initialize the language selector
+local selector = LanguageSelector.new()
+local autoLoaded = selector:Init(scripts)
+
+-- If no language was auto-loaded, show the GUI
+if not autoLoaded then
+    selector:CreateGUI()
+end
