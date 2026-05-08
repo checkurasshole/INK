@@ -1,0 +1,83 @@
+local AuthModule = {}
+
+local HttpService = game:GetService("HttpService")
+local _jsonDecode_ref = HttpService.JSONDecode
+local _jsonEncode_ref = HttpService.JSONEncode
+local rawequal_original = rawequal
+local _request = request or (syn and syn.request) or http_request
+
+local VALID_STATUSES = {allowed=true,session_active=true,cooldown=true,banned=true,game_not_allowed=true,throttled=true,error=true}
+
+local function getSupabaseUrl()
+	return table.concat({string.char(104,116,116,112,115,58,47,47),'zgqjncrelglx','cawifdeb','.supabase.co'})
+end
+local function getAnonKey()
+	return table.concat({'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.','eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpn','cWpuY3JlbGdseGNhd2lmZGViIiwicm9sZSI6','ImFub24iLCJpYXQiOjE3NzgyMjI4NzYsImV4','cCI6MjA5Mzc5ODg3Nn0.7er3nopYG__5XCBl','6rlfX1ZN231i2TlhQRnYUElqtwA'})
+end
+local function getScriptMapEndpoint()
+	return table.concat({string.char(104,116,116,112,115,58,47,47),'hwid-huddle','-time.lovable','.app/api/scripts'})
+end
+local function getScriptEndpoint()
+	return table.concat({string.char(104,116,116,112,115,58,47,47),'hwid-huddle','-time.lovable','.app/api/public/script'})
+end
+
+local SUPABASE_URL = getSupabaseUrl()
+local SUPABASE_ANON_KEY = getAnonKey()
+local SCRIPT_MAP_ENDPOINT = getScriptMapEndpoint()
+local SCRIPT_ENDPOINT = getScriptEndpoint()
+
+function AuthModule.getHWID()
+	local ok, id = pcall(function() return game:GetService("RbxAnalyticsService"):GetClientId() end)
+	if ok and id and id ~= "" then return tostring(id) end
+	return tostring(game:GetService("Players").LocalPlayer.UserId)
+end
+
+function AuthModule.checkSession(hwid)
+	if not rawequal_original(HttpService.JSONDecode, _jsonDecode_ref) then return nil end
+	if not _request then return nil end
+	local t = os.clock()
+	local ok, res = pcall(function()
+		return _request({
+			Url = SUPABASE_URL .. "/rest/v1/rpc/check_hwid",
+			Method = "POST",
+			Headers = {
+				["Content-Type"] = "application/json",
+				["apikey"] = SUPABASE_ANON_KEY,
+				["Authorization"] = "Bearer " .. SUPABASE_ANON_KEY,
+			},
+			Body = _jsonEncode_ref(HttpService, {p_hwid = hwid, p_game_id = tostring(game.PlaceId)})
+		})
+	end)
+	if not ok or not res then return nil end
+	if (os.clock() - t) < 0.005 then return nil end
+	if res.StatusCode ~= 200 then return nil end
+	local dok, data = pcall(_jsonDecode_ref, HttpService, res.Body)
+	if not dok or type(data) ~= "table" then return nil end
+	if type(data.status) ~= "string" or not VALID_STATUSES[data.status] then return nil end
+	return data
+end
+
+function AuthModule.getScriptForGame(token)
+	local ok, res = pcall(function()
+		return _request({Url = SCRIPT_MAP_ENDPOINT, Method = "GET", Headers = {["X-Session-Token"] = token}})
+	end)
+	if not ok or not res or res.StatusCode ~= 200 then return SCRIPT_ENDPOINT end
+	local dok, data = pcall(_jsonDecode_ref, HttpService, res.Body)
+	if not dok or type(data) ~= "table" then return SCRIPT_ENDPOINT end
+	local gameId = tostring(game.PlaceId)
+	if data[gameId] then return data[gameId]
+	elseif data["default"] then return data["default"] end
+	return SCRIPT_ENDPOINT
+end
+
+function AuthModule.loadScript(url, token)
+	local ok, s = pcall(function()
+		return _request({Url = url, Method = "GET", Headers = {["X-Session-Token"] = token}})
+	end)
+	if not ok or not s or s.StatusCode ~= 200 then return end
+	local chunk = loadstring(s.Body)
+	if not chunk then return end
+	pcall(chunk)
+end
+
+return AuthModule
