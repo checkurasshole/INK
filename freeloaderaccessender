@@ -1,0 +1,93 @@
+local function showExpiredPopup(onDone)
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "CW_Expired"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = game:GetService("CoreGui")
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.fromOffset(280, 140)
+    Frame.Position = UDim2.new(0.5, -140, 0, -150)
+    Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    Frame.BorderSizePixel = 0
+    Frame.Parent = ScreenGui
+
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
+
+    local Stroke = Instance.new("UIStroke", Frame)
+    Stroke.Color = Color3.fromRGB(80, 80, 100)
+    Stroke.Thickness = 1
+
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size = UDim2.new(1, -20, 0, 28)
+    Title.Position = UDim2.fromOffset(10, 10)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Free Session Ended"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 14
+    Title.Font = Enum.Font.GothamBold
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Sub = Instance.new("TextLabel", Frame)
+    Sub.Size = UDim2.new(1, -20, 0, 34)
+    Sub.Position = UDim2.fromOffset(10, 36)
+    Sub.BackgroundTransparency = 1
+    Sub.Text = "Get a key at combowick.com\nto continue without cooldowns."
+    Sub.TextColor3 = Color3.fromRGB(180, 180, 200)
+    Sub.TextSize = 12
+    Sub.Font = Enum.Font.Gotham
+    Sub.TextXAlignment = Enum.TextXAlignment.Left
+    Sub.TextWrapped = true
+
+    local Button = Instance.new("TextButton", Frame)
+    Button.Size = UDim2.new(1, -20, 0, 24)
+    Button.Position = UDim2.fromOffset(10, 74)
+    Button.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+    Button.BorderSizePixel = 0
+    Button.Text = "Copy Key Link"
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 12
+    Button.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+    Button.MouseButton1Click:Connect(function()
+        pcall(function() setclipboard("https://combowick.com/verify/provider-select") end)
+        Button.Text = "Copied!"
+        task.wait(1.5)
+        Button.Text = "Copy Key Link"
+    end)
+
+    local Bar = Instance.new("Frame", Frame)
+    Bar.Size = UDim2.new(1, -20, 0, 3)
+    Bar.Position = UDim2.fromOffset(10, 122)
+    Bar.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+    Bar.BorderSizePixel = 0
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+
+    Frame:TweenPosition(UDim2.new(0.5, -140, 0, 20), Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.4, true)
+
+    local ts = game:GetService("TweenService")
+    ts:Create(Bar, TweenInfo.new(20, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)}):Play()
+
+    task.delay(20, function()
+        Frame:TweenPosition(UDim2.new(0.5, -140, 0, -150), Enum.EasingDirection.In, Enum.EasingStyle.Quint, 0.4, true)
+        task.wait(0.5)
+        ScreenGui:Destroy()
+        if onDone then onDone() end
+    end)
+end
+
+if _G.COMBOWICK_KEY then
+    _G.COMBOWICK_FREE = false
+    _G.COMBOWICK_ACTIVE = nil
+    _G.COMBOWICK_KEY = false
+end
+
+if _G.COMBOWICK_FREE then
+    _G.COMBOWICK_ACTIVE = true
+    task.spawn(function()
+        repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
+        showExpiredPopup(function()
+            Library:Unload()
+        end)
+    end)
+end
