@@ -53,13 +53,37 @@ local antiTPReady  = false
 local isSpawning   = false
 local ANTI_TP_DIST = 45
 
+local espRemovalConn = nil
+
 local function removeESP(character)
     if not character then return end
     for _, obj in ipairs(character:GetDescendants()) do
-        if obj:IsA("Highlight") or obj:IsA("SelectionBox") or obj:IsA("SelectionSphere") then
+        if obj:IsA("Highlight") or obj:IsA("SelectionBox") or obj:IsA("SelectionSphere") 
+        or obj:IsA("BoxHandleAdornment") or obj:IsA("SphereHandleAdornment") then
             obj:Destroy()
         end
     end
+end
+
+local function startESPRemoval(character)
+    if espRemovalConn then
+        espRemovalConn:Disconnect()
+    end
+    
+    if not character then return end
+    
+    removeESP(character)
+    
+    character.DescendantAdded:Connect(function(obj)
+        if obj:IsA("Highlight") or obj:IsA("SelectionBox") or obj:IsA("SelectionSphere")
+        or obj:IsA("BoxHandleAdornment") or obj:IsA("SphereHandleAdornment") then
+            obj:Destroy()
+        end
+    end)
+    
+    espRemovalConn = RunService.Heartbeat:Connect(function()
+        removeESP(character)
+    end)
 end
 
 local function beginSpawn()
@@ -90,13 +114,7 @@ localPlayer.CharacterAdded:Connect(function(char)
 
     task.spawn(function()
         task.wait(0.1)
-        removeESP(char)
-        char.DescendantAdded:Connect(function(obj)
-            if obj:IsA("Highlight") or obj:IsA("SelectionBox") or obj:IsA("SelectionSphere") then
-                task.wait()
-                obj:Destroy()
-            end
-        end)
+        startESPRemoval(char)
     end)
 
     if savedCameraCF then
@@ -359,7 +377,7 @@ end)
 
 function Module.init()
     if localPlayer.Character then
-        removeESP(localPlayer.Character)
+        startESPRemoval(localPlayer.Character)
     end
 
     Module.startFly2()
