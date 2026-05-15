@@ -102,9 +102,11 @@ local function showExpiredPopup(onDone)
     end)
 end
 
-task.spawn(function()
-    repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
-    showExpiredPopup(function()
-        Library:Unload()
+if _G.COMBOWICK_FREE then
+    task.spawn(function()
+        repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
+        showExpiredPopup(function()
+            Library:Unload()
+        end)
     end)
-end)
+end
