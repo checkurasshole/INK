@@ -1,0 +1,49 @@
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Window = Library:CreateWindow({
+    Title = "COMBOWICK",
+    Footer = "premium",
+    NotifySide = "Right",
+    ShowCustomCursor = false,
+    AutoShow = true,
+    Size = UDim2.fromOffset(500, 300),
+})
+
+local Tabs = {
+    Main = Window:AddTab("Main", "user"),
+    ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+local MainGroup = Tabs.Main:AddLeftGroupbox("Main", "home")
+MainGroup:AddToggle("ExampleToggle", {Text = "Example Toggle", Default = false})
+MainGroup:AddButton({Text = "Example Button", Func = function() end})
+
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
+MenuGroup:AddToggle("ShowCustomCursor", {Text = "Custom Cursor", Default = false, Callback = function(Value) Library.ShowCustomCursor = Value end})
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {Default = "RightShift", NoUI = true, Text = "Menu keybind"})
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({"MenuKeybind"})
+ThemeManager:SetFolder("COMBOWICK")
+SaveManager:SetFolder("COMBOWICK/game")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:LoadAutoloadConfig()
+
+task.spawn(function()
+    repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
+    Library:Notify({Title = "COMBOWICK", Description = "Session expired.", Time = 4})
+    task.wait(2)
+    Library:Unload()
+end)
