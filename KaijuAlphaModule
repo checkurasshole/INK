@@ -53,6 +53,15 @@ local antiTPReady  = false
 local isSpawning   = false
 local ANTI_TP_DIST = 45
 
+local function removeESP(character)
+    if not character then return end
+    for _, obj in ipairs(character:GetDescendants()) do
+        if obj:IsA("Highlight") or obj:IsA("SelectionBox") or obj:IsA("SelectionSphere") then
+            obj:Destroy()
+        end
+    end
+end
+
 local function beginSpawn()
     isSpawning  = true
     antiTPReady = false
@@ -78,6 +87,17 @@ localPlayer.CharacterAdded:Connect(function(char)
     isSpawning  = false
     lastSafePos = nil
     prevHRPPos  = nil
+
+    task.spawn(function()
+        task.wait(0.1)
+        removeESP(char)
+        char.DescendantAdded:Connect(function(obj)
+            if obj:IsA("Highlight") or obj:IsA("SelectionBox") or obj:IsA("SelectionSphere") then
+                task.wait()
+                obj:Destroy()
+            end
+        end)
+    end)
 
     if savedCameraCF then
         Camera.CameraType = Enum.CameraType.Scriptable
@@ -338,6 +358,10 @@ ClientEvent.OnClientEvent:Connect(function(eventType, skillName, duration)
 end)
 
 function Module.init()
+    if localPlayer.Character then
+        removeESP(localPlayer.Character)
+    end
+
     Module.startFly2()
     localPlayer.CharacterAdded:Connect(function()
         task.wait(2.5)
