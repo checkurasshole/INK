@@ -102,7 +102,16 @@ local function showExpiredPopup(onDone)
     end)
 end
 
+-- If loaded via key auth, clear any leftover free session globals
+if _G.COMBOWICK_KEY then
+    _G.COMBOWICK_FREE = false
+    _G.COMBOWICK_ACTIVE = nil
+    _G.COMBOWICK_KEY = false
+end
+
+-- Only watch for session expiry if this was a free session load
 if _G.COMBOWICK_FREE then
+    _G.COMBOWICK_ACTIVE = true -- guarantee it starts true so the watcher doesn't skip
     task.spawn(function()
         repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
         showExpiredPopup(function()
