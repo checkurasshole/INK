@@ -1,0 +1,256 @@
+local Module = {}
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local TweenService       = game:GetService("TweenService")
+local UserInputService   = game:GetService("UserInputService")
+
+Module.setthreadidentity = set_thread_identity or setthreadcaps or setthreadidentity
+
+Module.LocalPlayer = Players.LocalPlayer
+
+Module.products = {
+    { name = "Big Donation (100 R$)", id = 1595847811 },
+    { name = "Inf Shards",            id = 3539271502 },
+    { name = "Multiplied XP",         id = 3442717108 },
+}
+
+Module.productNames = {}
+for _, p in ipairs(Module.products) do
+    table.insert(Module.productNames, p.name)
+end
+
+Module.selectedProduct = Module.products[1]
+Module.espConns        = {}
+Module.flightBody      = {}
+Module.heartbeatConn   = nil
+
+function Module.elevate()
+    pcall(Module.setthreadidentity, 7)
+end
+
+function Module.notify(Library, t, d)
+    Library:Notify({Title=t, Description=d, Time=4})
+end
+
+function Module.cleanupFlight()
+    for _, obj in pairs(Module.flightBody) do
+        pcall(function() obj:Destroy() end)
+    end
+    Module.flightBody = {}
+    local char = Module.LocalPlayer.Character
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = false end
+end
+
+function Module.setupFlight()
+    Module.cleanupFlight()
+    local char = Module.LocalPlayer.Character
+    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if not (char and hrp and hum) then return end
+    hum.PlatformStand   = true
+    local bv            = Instance.new("BodyVelocity")
+    bv.Velocity         = Vector3.zero
+    bv.MaxForce         = Vector3.new(1e5, 1e5, 1e5)
+    bv.Parent           = hrp
+    local bg            = Instance.new("BodyGyro")
+    bg.MaxTorque        = Vector3.new(1e5, 1e5, 1e5)
+    bg.D                = 100
+    bg.CFrame           = hrp.CFrame
+    bg.Parent           = hrp
+    Module.flightBody.bv = bv
+    Module.flightBody.bg = bg
+end
+
+function Module.getPlayerNames()
+    local names = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= Module.LocalPlayer then table.insert(names, p.Name) end
+    end
+    if #names == 0 then table.insert(names, "(no players)") end
+    return names
+end
+
+function Module.applyESP(char)
+    if not char then return end
+    local hl            = Instance.new("Highlight")
+    hl.Name             = "_CW_ESP"
+    hl.FillColor        = Color3.fromRGB(255, 40, 40)
+    hl.OutlineColor     = Color3.fromRGB(255, 255, 255)
+    hl.FillTransparency = 0.5
+    hl.Parent           = char
+end
+
+function Module.removeESP()
+    for _, c in pairs(Module.espConns) do pcall(function() c:Disconnect() end) end
+    Module.espConns = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= Module.LocalPlayer and p.Character then
+            local hl = p.Character:FindFirstChild("_CW_ESP")
+            if hl then hl:Destroy() end
+        end
+    end
+end
+
+function Module.enableESP()
+    Module.removeESP()
+    local function addPlayer(p)
+        if p == Module.LocalPlayer then return end
+        if p.Character then Module.applyESP(p.Character) end
+        table.insert(Module.espConns, p.CharacterAdded:Connect(Module.applyESP))
+    end
+    for _, p in pairs(Players:GetPlayers()) do addPlayer(p) end
+    table.insert(Module.espConns, Players.PlayerAdded:Connect(addPlayer))
+end
+
+function Module.fireProduct(Library, product)
+    local ok, err = pcall(function()
+        Module.elevate()
+        MarketplaceService:SignalPromptProductPurchaseFinished(Module.LocalPlayer.UserId, product.id, true)
+    end)
+    if ok then Module.notify(Library, "Got It!", "You received: " .. product.name)
+    else Module.notify(Library, "Failed", tostring(err)) end
+end
+
+function Module.fireAll(Library)
+    for _, p in ipairs(Module.products) do
+        pcall(function()
+            Module.elevate()
+            MarketplaceService:SignalPromptProductPurchaseFinished(Module.LocalPlayer.UserId, p.id, true)
+        end)
+        task.wait()
+    end
+    Module.notify(Library, "Done!", "Received all " .. #Module.products .. " items.")
+end
+
+function Module.startHeartbeat(Toggles, Options)
+    Module.heartbeatConn = RunService.Heartbeat:Connect(function()
+        local char = Module.LocalPlayer.Character
+        local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        local cam  = workspace.CurrentCamera
+
+        if Toggles.SpeedEnabled.Value and hum then
+            hum.WalkSpeed = Options.WalkSpeedVal.Value
+        end
+
+        if Toggles.FlightEnabled.Value then
+            if not (Module.flightBody.bv and Module.flightBody.bv.Parent) then
+                Module.setupFlight()
+            end
+            if hrp and Module.flightBody.bv and Module.flightBody.bg then
+                local speed = Options.FlightSpeed.Value
+                local mode  = Options.FlightMode.Value
+                local dir   = Vector3.zero
+
+                if mode == "Mobile (Camera Direction)" then
+                    dir = cam.CFrame.LookVector
+                else
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space)      then dir = dir + Vector3.new(0,1,0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)  then dir = dir - Vector3.new(0,1,0) end
+                end
+
+                Module.flightBody.bv.Velocity = dir.Magnitude > 0 and dir.Unit * speed or Vector3.zero
+                Module.flightBody.bg.CFrame   = hrp.CFrame
+            end
+        else
+            if Module.flightBody.bv then Module.cleanupFlight() end
+        end
+    end)
+end
+
+function Module.unloadAll(Library, Toggles)
+    getgenv().bbLoopSingle = false
+    getgenv().bbLoopAll    = false
+
+    if Toggles.FlightEnabled then Toggles.FlightEnabled:SetValue(false) end
+    if Toggles.SpeedEnabled  then Toggles.SpeedEnabled:SetValue(false)  end
+    if Toggles.PlayerESP     then Toggles.PlayerESP:SetValue(false)     end
+    if Toggles.LoopSingle    then Toggles.LoopSingle:SetValue(false)    end
+    if Toggles.LoopAll       then Toggles.LoopAll:SetValue(false)       end
+
+    Module.cleanupFlight()
+    Module.removeESP()
+
+    local char = Module.LocalPlayer.Character
+    local hum  = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = 16 end
+
+    if Module.heartbeatConn then Module.heartbeatConn:Disconnect() end
+end
+
+function Module.showExpiredPopup(Library)
+    local TweenService = game:GetService("TweenService")
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name           = "CW_Expired"
+    ScreenGui.ResetOnSpawn   = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent         = game:GetService("CoreGui")
+    local Frame = Instance.new("Frame")
+    Frame.Size             = UDim2.fromOffset(280, 140)
+    Frame.Position         = UDim2.new(0.5, -140, 0, -150)
+    Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    Frame.BorderSizePixel  = 0
+    Frame.Parent           = ScreenGui
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
+    local Stroke = Instance.new("UIStroke", Frame)
+    Stroke.Color     = Color3.fromRGB(80, 80, 100)
+    Stroke.Thickness = 1
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Size                   = UDim2.new(1, -20, 0, 28)
+    Title.Position               = UDim2.fromOffset(10, 10)
+    Title.BackgroundTransparency = 1
+    Title.Text                   = "Free Session Ended"
+    Title.TextColor3             = Color3.fromRGB(255, 255, 255)
+    Title.TextSize               = 14
+    Title.Font                   = Enum.Font.GothamBold
+    Title.TextXAlignment         = Enum.TextXAlignment.Left
+    local Sub = Instance.new("TextLabel", Frame)
+    Sub.Size                   = UDim2.new(1, -20, 0, 34)
+    Sub.Position               = UDim2.fromOffset(10, 36)
+    Sub.BackgroundTransparency = 1
+    Sub.Text                   = "Get a key at combowick.com\nto continue without cooldowns."
+    Sub.TextColor3             = Color3.fromRGB(180, 180, 200)
+    Sub.TextSize               = 12
+    Sub.Font                   = Enum.Font.Gotham
+    Sub.TextXAlignment         = Enum.TextXAlignment.Left
+    Sub.TextWrapped            = true
+    local Button = Instance.new("TextButton", Frame)
+    Button.Size             = UDim2.new(1, -20, 0, 24)
+    Button.Position         = UDim2.fromOffset(10, 74)
+    Button.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+    Button.BorderSizePixel  = 0
+    Button.Text             = "Copy Key Link"
+    Button.TextColor3       = Color3.fromRGB(255, 255, 255)
+    Button.TextSize         = 12
+    Button.Font             = Enum.Font.GothamBold
+    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+    Button.MouseButton1Click:Connect(function()
+        pcall(function() setclipboard("https://combowick.com/verify/provider-select") end)
+        Button.Text = "Copied!"
+        task.wait(1.5)
+        Button.Text = "Copy Key Link"
+    end)
+    local Bar = Instance.new("Frame", Frame)
+    Bar.Size             = UDim2.new(1, -20, 0, 3)
+    Bar.Position         = UDim2.fromOffset(10, 122)
+    Bar.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+    Bar.BorderSizePixel  = 0
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+    Frame:TweenPosition(UDim2.new(0.5, -140, 0, 20), Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.4, true)
+    TweenService:Create(Bar, TweenInfo.new(20, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)}):Play()
+    task.delay(20, function()
+        Frame:TweenPosition(UDim2.new(0.5, -140, 0, -150), Enum.EasingDirection.In, Enum.EasingStyle.Quint, 0.4, true)
+        task.wait(0.5)
+        ScreenGui:Destroy()
+        Library:Unload()
+    end)
+end
+
+return Module
