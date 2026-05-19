@@ -3,7 +3,7 @@ local WicksModule = {}
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local LINK = "https://wickshop-sparkle.lovable.app/"
+local LINK = "https://combowick.com/premium-keys"
 
 local T = {
 	en    = {title="Wicks Shop",status="Access Status:",paid="Paid",purchase="Purchase at",copy="Copy",copied="Copied!",plan="Plan",premium="Premium",keytype="Key Type",monthly="Monthly",lifetime="Lifetime",executor="Executor",universal="Universal",visit="Visit Shop",lang="English"},
