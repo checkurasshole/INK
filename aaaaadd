@@ -1,0 +1,611 @@
+-- Module: SurviveZombieArenaModule
+return function(Library, Toggles, Options)
+	local M = {}
+
+	local RS         = game:GetService("ReplicatedStorage")
+	local Players    = game:GetService("Players")
+	local RunService = game:GetService("RunService")
+	local LP         = Players.LocalPlayer
+
+	local autoKillLoop      = nil
+	local instaKillLoop     = nil
+	local skipLoop          = nil
+	local autoWeaponUpgLoop = nil
+	local autoHealthLoop    = nil
+	local autoBuyLoop       = nil
+	local noclipLoop        = nil
+	local espTable          = {}
+
+	local flyFloating     = false
+	local flyBaseHeight   = 0
+	local flyBodyVelocity = nil
+	local flyLoop         = nil
+
+	local invis_on                   = false
+	local invis_transparency         = 0.75
+	local currentSeat                = nil
+	local currentSeatPosition        = nil
+	local seatReturnHeartbeatConnection = nil
+	local voidLevelYThreshold        = -50
+
+	local CREDITS_PER_KILL = 5
+	M.sessionTotal      = 0
+	M.currentMultiplier = 1
+	local killsStat        = nil
+
+	task.spawn(function()
+		local ls = LP:WaitForChild("leaderstats")
+		killsStat = ls:WaitForChild("Kills")
+	end)
+
+	local ZombieDamageRemote  = nil
+	local GunHitRemote        = nil
+	local SkipVoteRemote      = nil
+	local WeaponUpgradeRemote = nil
+	local HealthUpgradeRemote = nil
+	local GearPurchaseRemote  = nil
+	local DoubleCreditsRemote = nil
+
+	task.spawn(function() ZombieDamageRemote  = RS:WaitForChild("ZombieRemotes"):WaitForChild("ZombieDamage") end)
+	task.spawn(function() GunHitRemote        = RS:WaitForChild("GunRemotes"):WaitForChild("GunHit") end)
+	task.spawn(function() SkipVoteRemote      = RS:WaitForChild("WaveRemotes"):WaitForChild("SkipVote") end)
+	task.spawn(function() WeaponUpgradeRemote = RS:WaitForChild("UpgradeRemotes", 9e9):WaitForChild("PurchaseWeaponUpgrade", 9e9) end)
+	task.spawn(function() HealthUpgradeRemote = RS:WaitForChild("UpgradeRemotes"):WaitForChild("PurchaseHealthUpgrade") end)
+	task.spawn(function() GearPurchaseRemote  = RS:WaitForChild("GearRemotes"):WaitForChild("GearPurchase") end)
+	task.spawn(function()
+		local gsr = RS:WaitForChild("GameStateRemotes")
+		DoubleCreditsRemote = gsr:WaitForChild("DoubleCreditsRequest", 9e9)
+	end)
+
+	task.spawn(function()
+		local GameStateRemotes = RS:WaitForChild("GameStateRemotes")
+		GameStateRemotes:WaitForChild("GameOverCredits").OnClientEvent:Connect(function(data)
+			if type(data) ~= "table" then return end
+			M.sessionTotal += data.TotalCredits
+			if data.Multiplier and data.Multiplier ~= M.currentMultiplier then
+				M.currentMultiplier = data.Multiplier
+			end
+			if Toggles.AutoDoubleCredits.Value and DoubleCreditsRemote then
+				task.wait(0.5)
+				pcall(function() DoubleCreditsRemote:FireServer() end)
+			end
+		end)
+		GameStateRemotes:WaitForChild("DoubleCreditsResult").OnClientEvent:Connect(function(data)
+			if type(data) == "table" and data.Success then
+				M.sessionTotal += data.DoubledTotal - (data.DoubledTotal / 2)
+			end
+		end)
+	end)
+
+	local function getEquippedWeapon()
+		local char = LP.Character
+		if char then
+			for _, item in ipairs(char:GetChildren()) do
+				if item:IsA("Tool") then return item.Name end
+			end
+		end
+		for _, item in ipairs(LP.Backpack:GetChildren()) do
+			if item:IsA("Tool") then return item.Name end
+		end
+		return "Pistol"
+	end
+
+	local function getZombieId(zombie)
+		return tonumber(zombie.Name:match("%d+"))
+	end
+
+	local function getZombiePosition(zombie)
+		local root = zombie:FindFirstChild("HumanoidRootPart") or zombie.PrimaryPart
+		return root and root.Position or Vector3.new(0, 0, 0)
+	end
+
+	local function damageZombie(id, amount)
+		if ZombieDamageRemote then
+			pcall(function() ZombieDamageRemote:FireServer(id, amount) end)
+		end
+	end
+
+	local function hitZombieWithGun(zombie, id)
+		if GunHitRemote then
+			pcall(function() GunHitRemote:FireServer(getEquippedWeapon(), id, getZombiePosition(zombie)) end)
+		end
+	end
+
+	local function getSortedZombies()
+		local folder = workspace:FindFirstChild("Zombies_Local")
+		if not folder then return {} end
+		local list = {}
+		for _, zombie in ipairs(folder:GetChildren()) do
+			if zombie:IsA("Model") then
+				local id = getZombieId(zombie)
+				if id then table.insert(list, { model = zombie, id = id }) end
+			end
+		end
+		return list
+	end
+
+	M.ESP_COLORS = {
+		Red    = Color3.fromRGB(255, 50,  50),
+		Orange = Color3.fromRGB(255, 140,  0),
+		Yellow = Color3.fromRGB(255, 220,  0),
+		Purple = Color3.fromRGB(180,   0, 255),
+	}
+
+	local function clearESP()
+		for _, h in pairs(espTable) do pcall(function() h:Destroy() end) end
+		espTable = {}
+	end
+	M.clearESP = clearESP
+
+	function M.applyESPColor(color)
+		for _, h in pairs(espTable) do h.FillColor = color end
+	end
+
+	function M.updateESP()
+		if not Toggles.ZombieESP.Value then return end
+		local folder = workspace:FindFirstChild("Zombies_Local")
+		if not folder then clearESP() return end
+		for zombie, h in pairs(espTable) do
+			if not zombie.Parent then
+				pcall(function() h:Destroy() end)
+				espTable[zombie] = nil
+			end
+		end
+		local fillColor = M.ESP_COLORS[Options.ESPColor.Value] or M.ESP_COLORS.Red
+		for _, zombie in ipairs(folder:GetChildren()) do
+			if zombie:IsA("Model") and not espTable[zombie] then
+				local h = Instance.new("Highlight")
+				h.FillColor           = fillColor
+				h.OutlineColor        = Color3.fromRGB(255, 255, 255)
+				h.FillTransparency    = 0.45
+				h.OutlineTransparency = 0
+				h.Adornee             = zombie
+				h.Parent              = zombie
+				espTable[zombie]      = h
+			end
+		end
+	end
+
+	local function setCharacterTransparency(transparency)
+		local character = LP.Character
+		if not character then return end
+		for _, part in pairs(character:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				part.Transparency = transparency
+			end
+		end
+	end
+
+	local function startSeatReturnHeartbeat()
+		if seatReturnHeartbeatConnection then
+			seatReturnHeartbeatConnection:Disconnect()
+			seatReturnHeartbeatConnection = nil
+		end
+		seatReturnHeartbeatConnection = RunService.Heartbeat:Connect(function()
+			if not invis_on or not currentSeat or not currentSeat.Parent then return end
+			local character = LP.Character
+			if not character then return end
+			local hrp = character:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+			currentSeat.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 9, 0))
+		end)
+	end
+
+	local function stopSeatReturnHeartbeat()
+		if seatReturnHeartbeatConnection then
+			seatReturnHeartbeatConnection:Disconnect()
+			seatReturnHeartbeatConnection = nil
+		end
+	end
+
+	function M.disableInvisibility()
+		if not invis_on then return end
+		invis_on = false
+		setCharacterTransparency(0)
+		task.spawn(function()
+			local inv = workspace:FindFirstChild("invischair")
+			if inv then pcall(function() inv:Destroy() end) end
+		end)
+		stopSeatReturnHeartbeat()
+		currentSeat = nil
+		currentSeatPosition = nil
+	end
+
+	function M.enableInvisibility()
+		if invis_on then return end
+		invis_on = true
+		setCharacterTransparency(invis_transparency)
+		local character = LP.Character
+		if not character then invis_on = false return end
+		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if not humanoidRootPart or not humanoid then
+			invis_on = false
+			setCharacterTransparency(0)
+			return
+		end
+		local savedpos = humanoidRootPart.CFrame
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+		task.wait(0.15)
+		local abovePos = humanoidRootPart.Position + Vector3.new(0, 9, 0)
+		task.wait(0.05)
+		pcall(function() character:MoveTo(abovePos) end)
+		task.wait(0.05)
+		if not character:FindFirstChild("HumanoidRootPart") or character.HumanoidRootPart.Position.Y < voidLevelYThreshold then
+			pcall(function() character:MoveTo(savedpos.Position) end)
+			invis_on = false
+			setCharacterTransparency(0)
+			if Toggles.InvisEnabled then
+				pcall(function() Toggles.InvisEnabled:SetValue(false) end)
+			end
+			return
+		end
+		local Seat = Instance.new("Seat")
+		Seat.Parent = workspace
+		Seat.Anchored = false
+		Seat.CanCollide = false
+		Seat.Name = "invischair"
+		Seat.Transparency = 1
+		Seat.Position = abovePos
+		currentSeat = Seat
+		local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+		if torso then
+			local Weld = Instance.new("Weld")
+			Weld.Part0 = torso
+			Weld.Part1 = Seat
+			Weld.C0 = CFrame.new(0, 9, 0)
+			Weld.Parent = Seat
+			task.wait()
+			pcall(function() humanoidRootPart.CFrame = savedpos end)
+			currentSeatPosition = Seat.Position
+			startSeatReturnHeartbeat()
+		else
+			Seat:Destroy()
+			currentSeat = nil
+			currentSeatPosition = nil
+			invis_on = false
+			setCharacterTransparency(0)
+			if Toggles.InvisEnabled then
+				pcall(function() Toggles.InvisEnabled:SetValue(false) end)
+			end
+			stopSeatReturnHeartbeat()
+		end
+	end
+
+	function M.setInvisTransparency(value)
+		invis_transparency = math.clamp(value, 0, 1)
+		if invis_on then setCharacterTransparency(invis_transparency) end
+	end
+
+	function M.startFly()
+		local pchar = LP.Character
+		if not pchar then return end
+		local root = pchar:FindFirstChild("HumanoidRootPart") or pchar.PrimaryPart
+		if not root then return end
+		flyFloating     = true
+		flyBaseHeight   = root.Position.Y
+		flyBodyVelocity = Instance.new("BodyVelocity")
+		flyBodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
+		flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+		flyBodyVelocity.Parent   = root
+		flyLoop = RunService.Heartbeat:Connect(function()
+			local c = LP.Character
+			if not c then return end
+			local r = c:FindFirstChild("HumanoidRootPart") or c.PrimaryPart
+			if r and flyBodyVelocity and flyFloating then
+				local diff = (flyBaseHeight + Options.FlyHeight.Value) - r.Position.Y
+				flyBodyVelocity.Velocity = Vector3.new(0, diff * 8, 0)
+			end
+		end)
+	end
+
+	function M.stopFly()
+		flyFloating = false
+		if flyLoop then flyLoop:Disconnect() flyLoop = nil end
+		if flyBodyVelocity then
+			pcall(function() flyBodyVelocity:Destroy() end)
+			flyBodyVelocity = nil
+		end
+	end
+
+	function M.getZombieCount()
+		local folder = workspace:FindFirstChild("Zombies_Local")
+		return folder and #folder:GetChildren() or 0
+	end
+
+	function M.getEstCredits()
+		local kills = killsStat and killsStat.Value or 0
+		return kills * CREDITS_PER_KILL * M.currentMultiplier
+	end
+
+	function M.startAutoKill()
+		autoKillLoop = task.spawn(function()
+			while Toggles.AutoKill.Value do
+				for _, data in ipairs(getSortedZombies()) do
+					if not Toggles.AutoKill.Value then break end
+					hitZombieWithGun(data.model, data.id)
+				end
+				task.wait(Options.AutoKillDelay.Value)
+			end
+		end)
+	end
+
+	function M.stopAutoKill()
+		if autoKillLoop then task.cancel(autoKillLoop) autoKillLoop = nil end
+	end
+
+	function M.startInstaKill()
+		instaKillLoop = task.spawn(function()
+			while Toggles.InstaKill.Value do
+				for _, data in ipairs(getSortedZombies()) do
+					if not Toggles.InstaKill.Value then break end
+					damageZombie(data.id, Options.InstaKillDamage.Value)
+				end
+				task.wait(Options.InstaKillDelay.Value)
+			end
+		end)
+	end
+
+	function M.stopInstaKill()
+		if instaKillLoop then task.cancel(instaKillLoop) instaKillLoop = nil end
+	end
+
+	function M.killAll()
+		for _, data in ipairs(getSortedZombies()) do
+			damageZombie(data.id, 999999999)
+		end
+	end
+
+	function M.startSkip()
+		skipLoop = task.spawn(function()
+			while Toggles.AutoSkipWave.Value do
+				if SkipVoteRemote then pcall(function() SkipVoteRemote:FireServer(true) end) end
+				task.wait(1)
+			end
+		end)
+	end
+
+	function M.stopSkip()
+		if skipLoop then task.cancel(skipLoop) skipLoop = nil end
+	end
+
+	function M.instantSkip()
+		if invis_on then
+			M.disableInvisibility()
+			pcall(function() Toggles.InvisEnabled:SetValue(false) end)
+			task.wait(0.15)
+		end
+		local pchar = LP.Character
+		if not pchar then return end
+		local root = pchar:FindFirstChild("HumanoidRootPart") or pchar.PrimaryPart
+		if not root then return end
+		root.CFrame = CFrame.new(
+			-346.646454, 429.63501, -351.827087,
+			0.731384635, 0, 0.681965172,
+			0, 1, 0,
+			-0.681965172, 0, 0.731384635
+		)
+	end
+
+	function M.startWeaponUpgrade()
+		autoWeaponUpgLoop = task.spawn(function()
+			while Toggles.AutoWeaponUpgrade.Value do
+				if WeaponUpgradeRemote then pcall(function() WeaponUpgradeRemote:FireServer() end) end
+				task.wait(Options.WeaponUpgradeDelay.Value)
+			end
+		end)
+	end
+
+	function M.stopWeaponUpgrade()
+		if autoWeaponUpgLoop then task.cancel(autoWeaponUpgLoop) autoWeaponUpgLoop = nil end
+	end
+
+	function M.startHealthUpgrade()
+		autoHealthLoop = task.spawn(function()
+			while Toggles.AutoHealthUpgrade.Value do
+				if HealthUpgradeRemote then pcall(function() HealthUpgradeRemote:FireServer() end) end
+				task.wait(Options.HealthUpgradeDelay.Value)
+			end
+		end)
+	end
+
+	function M.stopHealthUpgrade()
+		if autoHealthLoop then task.cancel(autoHealthLoop) autoHealthLoop = nil end
+	end
+
+	function M.startAutoBuy()
+		autoBuyLoop = task.spawn(function()
+			while Toggles.AutoBuyGear.Value do
+				if GearPurchaseRemote then
+					for gear, enabled in pairs(Options.GearBuySelect.Value) do
+						if enabled then
+							pcall(function() GearPurchaseRemote:FireServer(gear) end)
+							task.wait(0.05)
+						end
+					end
+				end
+				task.wait(Options.GearBuyDelay.Value)
+			end
+		end)
+	end
+
+	function M.stopAutoBuy()
+		if autoBuyLoop then task.cancel(autoBuyLoop) autoBuyLoop = nil end
+	end
+
+	function M.startNoclip()
+		noclipLoop = RunService.Stepped:Connect(function()
+			local char = LP.Character
+			if char then
+				for _, part in ipairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then part.CanCollide = false end
+				end
+			end
+		end)
+	end
+
+	function M.stopNoclip()
+		if noclipLoop then noclipLoop:Disconnect() noclipLoop = nil end
+		local char = LP.Character
+		if char then
+			for _, part in ipairs(char:GetDescendants()) do
+				if part:IsA("BasePart") then part.CanCollide = true end
+			end
+		end
+	end
+
+	function M.enableAntiAFK()
+		if getconnections then
+			for _, connection in pairs(getconnections(LP.Idled)) do
+				if connection["Disable"] then
+					connection["Disable"](connection)
+				elseif connection["Disconnect"] then
+					connection["Disconnect"](connection)
+				end
+			end
+		else
+			LP.Idled:Connect(function()
+				local vu = game:GetService("VirtualUser")
+				vu:CaptureController()
+				vu:ClickButton2(Vector2.new())
+			end)
+		end
+	end
+
+	function M.setWalkSpeed(value)
+		local char = LP.Character
+		if char then
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if hum then hum.WalkSpeed = value end
+		end
+	end
+
+	function M.setJumpPower(value)
+		local char = LP.Character
+		if char then
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if hum then hum.JumpPower = value end
+		end
+	end
+
+	function M.disableAllFeatures()
+		pcall(function() if Toggles.AutoKill.Value          then Toggles.AutoKill:SetValue(false)          end end)
+		pcall(function() if Toggles.InstaKill.Value         then Toggles.InstaKill:SetValue(false)         end end)
+		pcall(function() if Toggles.AutoSkipWave.Value      then Toggles.AutoSkipWave:SetValue(false)      end end)
+		pcall(function() if Toggles.ZombieESP.Value         then Toggles.ZombieESP:SetValue(false)         end end)
+		pcall(function() if Toggles.AutoWeaponUpgrade.Value then Toggles.AutoWeaponUpgrade:SetValue(false) end end)
+		pcall(function() if Toggles.AutoHealthUpgrade.Value then Toggles.AutoHealthUpgrade:SetValue(false) end end)
+		pcall(function() if Toggles.AutoBuyGear.Value       then Toggles.AutoBuyGear:SetValue(false)       end end)
+		pcall(function() if Toggles.EnableFly.Value         then Toggles.EnableFly:SetValue(false)         end end)
+		pcall(function() if Toggles.Noclip.Value            then Toggles.Noclip:SetValue(false)            end end)
+		pcall(function() if Toggles.AutoDoubleCredits.Value then Toggles.AutoDoubleCredits:SetValue(false) end end)
+		pcall(function() if Toggles.InvisEnabled.Value      then Toggles.InvisEnabled:SetValue(false)      end end)
+	end
+
+	function M.showExpiredPopup(onDone)
+		local ScreenGui = Instance.new("ScreenGui")
+		ScreenGui.Name = "CW_Expired"
+		ScreenGui.ResetOnSpawn = false
+		ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		ScreenGui.Parent = game:GetService("CoreGui")
+		local Frame = Instance.new("Frame")
+		Frame.Size = UDim2.fromOffset(280, 140)
+		Frame.Position = UDim2.new(0.5, -140, 0, -150)
+		Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+		Frame.BorderSizePixel = 0
+		Frame.Parent = ScreenGui
+		Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
+		local Stroke = Instance.new("UIStroke", Frame)
+		Stroke.Color = Color3.fromRGB(80, 80, 100)
+		Stroke.Thickness = 1
+		local Title = Instance.new("TextLabel", Frame)
+		Title.Size = UDim2.new(1, -20, 0, 28)
+		Title.Position = UDim2.fromOffset(10, 10)
+		Title.BackgroundTransparency = 1
+		Title.Text = "Free Session Ended"
+		Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+		Title.TextSize = 14
+		Title.Font = Enum.Font.GothamBold
+		Title.TextXAlignment = Enum.TextXAlignment.Left
+		local Sub = Instance.new("TextLabel", Frame)
+		Sub.Size = UDim2.new(1, -20, 0, 34)
+		Sub.Position = UDim2.fromOffset(10, 36)
+		Sub.BackgroundTransparency = 1
+		Sub.Text = "Get a key at combowick.com\nto continue without limits."
+		Sub.TextColor3 = Color3.fromRGB(180, 180, 200)
+		Sub.TextSize = 12
+		Sub.Font = Enum.Font.Gotham
+		Sub.TextXAlignment = Enum.TextXAlignment.Left
+		Sub.TextWrapped = true
+		local Button = Instance.new("TextButton", Frame)
+		Button.Size = UDim2.new(1, -20, 0, 24)
+		Button.Position = UDim2.fromOffset(10, 74)
+		Button.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+		Button.BorderSizePixel = 0
+		Button.Text = "Copy Key Link"
+		Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		Button.TextSize = 12
+		Button.Font = Enum.Font.GothamBold
+		Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+		Button.MouseButton1Click:Connect(function()
+			pcall(function() setclipboard("https://combowick.com/verify/provider-select") end)
+			Button.Text = "Copied!"
+			task.wait(1.5)
+			Button.Text = "Copy Key Link"
+		end)
+		local Bar = Instance.new("Frame", Frame)
+		Bar.Size = UDim2.new(1, -20, 0, 3)
+		Bar.Position = UDim2.fromOffset(10, 122)
+		Bar.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+		Bar.BorderSizePixel = 0
+		Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+		Frame:TweenPosition(UDim2.new(0.5, -140, 0, 20), Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.4, true)
+		local ts = game:GetService("TweenService")
+		ts:Create(Bar, TweenInfo.new(20, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 0, 3) }):Play()
+		task.delay(20, function()
+			Frame:TweenPosition(UDim2.new(0.5, -140, 0, -150), Enum.EasingDirection.In, Enum.EasingStyle.Quint, 0.4, true)
+			task.wait(0.5)
+			ScreenGui:Destroy()
+			if onDone then onDone() end
+		end)
+	end
+
+	LP.CharacterAdded:Connect(function(char)
+		flyFloating = false flyBaseHeight = 0 flyBodyVelocity = nil flyLoop = nil
+		invis_on = false
+		currentSeat = nil
+		currentSeatPosition = nil
+		stopSeatReturnHeartbeat()
+		pcall(function() if Toggles.EnableFly.Value   then Toggles.EnableFly:SetValue(false)   end end)
+		pcall(function() if Toggles.Noclip.Value      then Toggles.Noclip:SetValue(false)      end end)
+		pcall(function() if Toggles.InvisEnabled.Value then Toggles.InvisEnabled:SetValue(false) end end)
+		local hum = char:WaitForChild("Humanoid", 5)
+		if hum then
+			if Options.WalkSpeed then hum.WalkSpeed = Options.WalkSpeed.Value end
+			if Options.JumpPower then hum.JumpPower  = Options.JumpPower.Value  end
+		end
+	end)
+
+	Library:OnUnload(function()
+		if autoKillLoop      then task.cancel(autoKillLoop)                end
+		if instaKillLoop     then task.cancel(instaKillLoop)               end
+		if skipLoop          then task.cancel(skipLoop)                    end
+		if autoWeaponUpgLoop then task.cancel(autoWeaponUpgLoop)           end
+		if autoHealthLoop    then task.cancel(autoHealthLoop)              end
+		if autoBuyLoop       then task.cancel(autoBuyLoop)                 end
+		if noclipLoop        then noclipLoop:Disconnect() noclipLoop = nil end
+		M.stopFly()
+		M.disableInvisibility()
+		clearESP()
+		local pchar = LP.Character
+		if pchar then
+			for _, part in ipairs(pchar:GetDescendants()) do
+				if part:IsA("BasePart") then part.CanCollide = true end
+			end
+			local hum = pchar:FindFirstChildOfClass("Humanoid")
+			if hum then hum.WalkSpeed = 16 hum.JumpPower = 50 end
+		end
+	end)
+
+	return M
+end
