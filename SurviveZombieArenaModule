@@ -1,4 +1,3 @@
--- Module: SurviveZombieArenaModule
 return function(Library, Toggles, Options)
 	local M = {}
 
@@ -21,16 +20,16 @@ return function(Library, Toggles, Options)
 	local flyBodyVelocity = nil
 	local flyLoop         = nil
 
-	local invis_on                   = false
-	local invis_transparency         = 0.75
-	local currentSeat                = nil
-	local currentSeatPosition        = nil
+	local invis_on                      = false
+	local invis_transparency            = 0.75
+	local currentSeat                   = nil
+	local currentSeatPosition           = nil
 	local seatReturnHeartbeatConnection = nil
-	local voidLevelYThreshold        = -50
+	local voidLevelYThreshold           = -50
 
 	local CREDITS_PER_KILL = 5
-	M.sessionTotal      = 0
-	M.currentMultiplier = 1
+	M.sessionTotal         = 0
+	M.currentMultiplier    = 1
 	local killsStat        = nil
 
 	task.spawn(function()
@@ -486,20 +485,6 @@ return function(Library, Toggles, Options)
 			local hum = char:FindFirstChildOfClass("Humanoid")
 			if hum then hum.JumpPower = value end
 		end
-	end
-
-	function M.disableAllFeatures()
-		pcall(function() if Toggles.AutoKill.Value          then Toggles.AutoKill:SetValue(false)          end end)
-		pcall(function() if Toggles.InstaKill.Value         then Toggles.InstaKill:SetValue(false)         end end)
-		pcall(function() if Toggles.AutoSkipWave.Value      then Toggles.AutoSkipWave:SetValue(false)      end end)
-		pcall(function() if Toggles.ZombieESP.Value         then Toggles.ZombieESP:SetValue(false)         end end)
-		pcall(function() if Toggles.AutoWeaponUpgrade.Value then Toggles.AutoWeaponUpgrade:SetValue(false) end end)
-		pcall(function() if Toggles.AutoHealthUpgrade.Value then Toggles.AutoHealthUpgrade:SetValue(false) end end)
-		pcall(function() if Toggles.AutoBuyGear.Value       then Toggles.AutoBuyGear:SetValue(false)       end end)
-		pcall(function() if Toggles.EnableFly.Value         then Toggles.EnableFly:SetValue(false)         end end)
-		pcall(function() if Toggles.Noclip.Value            then Toggles.Noclip:SetValue(false)            end end)
-		pcall(function() if Toggles.AutoDoubleCredits.Value then Toggles.AutoDoubleCredits:SetValue(false) end end)
-		pcall(function() if Toggles.InvisEnabled.Value      then Toggles.InvisEnabled:SetValue(false)      end end)
 	end
 
 	LP.CharacterAdded:Connect(function(char)
