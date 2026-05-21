@@ -33,7 +33,7 @@ local WaveGroup    = Tabs.Main:AddRightGroupbox("Wave ", "waves")
 local MiscGroup    = Tabs.Main:AddRightGroupbox("Misc ", "map-pin")
 local InfoGroup    = Tabs.Main:AddRightGroupbox("Info ", "info")
 
-local Mod = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/main/SurviveZombieArenaModule"))()(Library, Toggles, Options)
+local Mod = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/main/aaaaadd"))()(Library, Toggles, Options)
 
 local countLabel    = InfoGroup:AddLabel("Zombies: 0")
 local estCredLabel  = InfoGroup:AddLabel("Est. Credits: 0")
