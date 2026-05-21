@@ -33,7 +33,7 @@ local WaveGroup    = Tabs.Main:AddRightGroupbox("Wave ", "waves")
 local MiscGroup    = Tabs.Main:AddRightGroupbox("Misc ", "map-pin")
 local InfoGroup    = Tabs.Main:AddRightGroupbox("Info ", "info")
 
-local Mod = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/main/aaaaadd"))()(Library, Toggles, Options)
+local Mod = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/main/SurviveZombieArenaModule"))()(Library, Toggles, Options)
 
 local countLabel    = InfoGroup:AddLabel("Zombies: 0")
 local estCredLabel  = InfoGroup:AddLabel("Est. Credits: 0")
@@ -121,13 +121,14 @@ InvisGroup:AddToggle("InvisEnabled", {
 	Default = false,
 	Callback = function(Value)
 		if Value then
-			Mod.setInvisTransparency(Options.InvisTransparency.Value / 100)
+			Mod.setInvisTransparency(Options.InvisTransparency.Value / 100) -- apply current slider value immediately
 			Mod.enableInvisibility()
 		else
 			Mod.disableInvisibility()
 		end
 	end,
 })
+
 InvisGroup:AddSlider("InvisTransparency", {
 	Text = "Transparency ", Default = 0, Min = 0, Max = 100, Rounding = 0,
 	Callback = function(value)
@@ -247,7 +248,6 @@ ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
 Library:SetDPIScale(100)
 
--- Expiry popup lives here in the main script, NOT in the module
 local function showExpiredPopup(onDone)
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "CW_Expired"
@@ -334,7 +334,6 @@ if _G.COMBOWICK_FREE then
 	_G.COMBOWICK_ACTIVE = true
 	task.spawn(function()
 		repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
-		Mod.disableAllFeatures()
 		showExpiredPopup(function()
 			Library:Unload()
 		end)
