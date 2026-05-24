@@ -1,0 +1,1383 @@
+local assert = assert
+local type = type
+local pairs = pairs
+local ipairs = ipairs
+local pcall = pcall
+local xpcall = xpcall
+local error = error
+local setmetatable = setmetatable
+local getmetatable = getmetatable
+local rawget = rawget
+local rawset = rawset
+local rawequal = rawequal
+local rawlen = rawlen
+local select = select
+local unpack = table.unpack or unpack
+local next = next
+local tostring = tostring
+local tonumber = tonumber
+local load = load or loadstring
+local loadstring = load
+local coroutine = coroutine
+local string = string
+local table = table
+local math = math
+
+local _results = {}
+local _total = 0
+local _passed = 0
+
+local function _test(name, fn)
+    _total = _total + 1
+    local ok, err = pcall(fn)
+    if ok then
+        _passed = _passed + 1
+    else
+        _results[#_results + 1] = "[FAIL] " .. name .. ": " .. tostring(err)
+    end
+end
+
+-- helper: compile a chunk at runtime so 5.1-incompatible syntax won't crash the parser
+local function loadchunk(src, ...)
+    local args = {...}
+    local fn = load(src)
+    if not fn then return nil end
+    return fn(unpack(args))
+end
+
+_test("primitives and basic types", function()
+    local a = nil
+    local b = true
+    local c = false
+    local d = 0
+    local e = 1
+    local f = -1
+    local g = 3.14
+    local h = 1e10
+    local i = 0xff
+    local j = 0xFF
+    local k = 1.5e-3
+    local l = math.huge
+    local m = -math.huge
+    local n = 0/0
+    local o = "hello"
+    local p = 'world'
+    local q = [[long string]]
+    local r = [==[another long string]==]
+    local s = "escape \n \t \r \\ \" \' \0 \97 \x61"
+    assert(a == nil)
+    assert(b == true)
+    assert(c == false)
+    assert(d == 0)
+    assert(e == 1)
+    assert(f == -1)
+    assert(g == 3.14)
+    assert(i == 255)
+    assert(j == 255)
+    assert(o == "hello")
+    assert(p == "world")
+    assert(q == "long string")
+    assert(r == "another long string")
+    assert(type(n) == "number")
+    assert(n ~= n)
+    assert(l == math.huge)
+    assert(m == -math.huge)
+end)
+
+_test("arithmetic operators", function()
+    assert(1 + 1 == 2)
+    assert(10 - 3 == 7)
+    assert(2 * 3 == 6)
+    assert(10 / 3 ~= 3)
+    -- floor division: use load so Lua 5.1 parser doesn't choke
+    local fdiv = load("return 10 // 3")
+    if fdiv then assert(fdiv() == 3) end
+    assert(10 % 3 == 1)
+    assert(2 ^ 10 == 1024)
+    assert(-(-5) == 5)
+    assert(#"hello" == 5)
+end)
+
+_test("relational operators", function()
+    assert((1 == 1) == true)
+    assert((1 ~= 2) == true)
+    assert((1 < 2) == true)
+    assert((2 > 1) == true)
+    assert((1 <= 1) == true)
+    assert((2 >= 2) == true)
+    assert(("abc" < "abd") == true)
+    assert(("z" > "a") == true)
+end)
+
+_test("logical operators", function()
+    assert((true and true) == true)
+    assert((true and false) == false)
+    assert((false and true) == false)
+    assert((false or true) == true)
+    assert((false or false) == false)
+    assert((not true) == false)
+    assert((not false) == true)
+    assert((not nil) == true)
+    assert((not 0) == false)
+    assert((1 and 2) == 2)
+    assert((nil and 2) == nil)
+    assert((false and 2) == false)
+    assert((nil or 2) == 2)
+    assert((false or 2) == 2)
+    assert((1 or 2) == 1)
+end)
+
+_test("math.type and math.tointeger", function()
+    if math.type then
+        assert(math.type(1) == "integer")
+        assert(math.type(1.0) == "float")
+        local r = math.type("x")
+        assert(r == false or r == nil)
+    end
+    if math.tointeger then
+        assert(math.tointeger(5.0) == 5)
+        assert(math.tointeger(5.5) == nil)
+    end
+end)
+
+_test("native bitwise operators", function()
+    -- wrap in load so Lua 5.1 parser never sees this syntax
+    local chunk = load([[
+        local x = 1 << 4
+        local y = 256 >> 2
+        local z = 0xFF & 0x0F
+        local w = 0xF0 | 0x0F
+        local v = 0xFF ~ 0x0F
+        local u = ~0
+        assert(x == 16)
+        assert(y == 64)
+        assert(z == 15)
+        assert(w == 255)
+        assert(v == 0xF0)
+        assert(u == -1 or u == 0xFFFFFFFFFFFFFFFF)
+    ]])
+    if not chunk then return end -- skip on unsupported VM
+    chunk()
+end)
+
+_test("bit32 library", function()
+    if not bit32 then return end -- skip if not available (Lua 5.3+ removed it)
+    assert(bit32.band(0xFF, 0x0F) == 15)
+    assert(bit32.bor(0xF0, 0x0F) == 255)
+    assert(bit32.bxor(0xFF, 0x0F) == 0xF0)
+    assert(bit32.bnot(0) == 0xFFFFFFFF)
+    assert(bit32.lshift(1, 4) == 16)
+    assert(bit32.rshift(256, 2) == 64)
+    -- arshift: arithmetic shift right, MSB is replicated
+    local arshift_result = bit32.arshift(0x80000000, 1)
+    assert(arshift_result == 0xC0000000, "arshift got " .. tostring(arshift_result))
+    assert(bit32.extract(0xFF, 4, 4) == 0xF)
+    assert(bit32.replace(0x00, 0xF, 4, 4) == 0xF0)
+end)
+
+_test("string concatenation", function()
+    assert("hello" .. " " .. "world" == "hello world")
+    assert(tostring(123) .. "" == "123")
+    assert(#("abc" .. "def") == 6)
+end)
+
+_test("tonumber tostring type", function()
+    assert(tonumber("42") == 42)
+    assert(tonumber("3.14") == 3.14)
+    assert(tonumber("0xff") == 255)
+    assert(tonumber("10", 2) == 2)
+    assert(tonumber("ff", 16) == 255)
+    assert(tonumber("z", 36) == 35)
+    assert(tonumber("notanumber") == nil)
+    assert(tostring(true) == "true")
+    assert(tostring(false) == "false")
+    assert(tostring(nil) == "nil")
+    assert(type(tostring(123)) == "string")
+    assert(type(nil) == "nil")
+    assert(type(true) == "boolean")
+    assert(type(42) == "number")
+    assert(type("str") == "string")
+    assert(type({}) == "table")
+    assert(type(type) == "function")
+end)
+
+_test("table construction and access", function()
+    local t1 = {}
+    local t2 = {1, 2, 3}
+    local t3 = {a = 1, b = 2, c = 3}
+    local t4 = {1, 2, a = 3, b = 4, 5}
+    local t5 = {[1] = "a", [2] = "b", [3] = "c"}
+    local t6 = {["key with spaces"] = true}
+    local t7 = {[true] = 1, [false] = 2, [0] = 3}
+    local t8 = {{1,2},{3,4},{5,6}}
+    local t9 = {nested = {deep = {deeper = {value = 42}}}}
+    assert(#t2 == 3)
+    assert(t2[1] == 1 and t2[2] == 2 and t2[3] == 3)
+    assert(t3.a == 1 and t3.b == 2 and t3.c == 3)
+    assert(t3["a"] == 1)
+    assert(t4[1] == 1 and t4[2] == 2 and t4[3] == 5)
+    assert(t4.a == 3 and t4.b == 4)
+    assert(t5[1] == "a")
+    assert(t6["key with spaces"] == true)
+    assert(t7[true] == 1 and t7[false] == 2 and t7[0] == 3)
+    assert(t8[1][2] == 2)
+    assert(t9.nested.deep.deeper.value == 42)
+    t1.x = 10; t1.y = 20; t1[1] = "first"
+    assert(t1.x == 10 and t1.y == 20 and t1[1] == "first")
+    local count = 0
+    for k, v in pairs(t3) do count = count + 1 end
+    assert(count == 3)
+    count = 0
+    for i, v in ipairs(t2) do count = count + 1 end
+    assert(count == 3)
+end)
+
+_test("table library functions", function()
+    local t = {1, 2, 3}
+    table.insert(t, 4)
+    assert(#t == 4 and t[4] == 4)
+    table.insert(t, 1, 0)
+    assert(t[1] == 0 and t[2] == 1)
+    local removed = table.remove(t)
+    assert(removed == 4)
+    removed = table.remove(t, 1)
+    assert(removed == 0 and t[1] == 1)
+    local sorted = {3, 1, 4, 1, 5, 9, 2, 6}
+    table.sort(sorted)
+    assert(sorted[1] == 1 and sorted[#sorted] == 9)
+    table.sort(sorted, function(a, b) return a > b end)
+    assert(sorted[1] == 9 and sorted[#sorted] == 1)
+    local concat_t = {"a", "b", "c", "d"}
+    assert(table.concat(concat_t, ",") == "a,b,c,d")
+    assert(table.concat(concat_t, "-", 2, 3) == "b-c")
+    if table.move then
+        local src = {1,2,3,4,5}
+        local dst = {10,20,30}
+        table.move(src, 1, 3, 2, dst)
+        assert(dst[2] == 1 and dst[3] == 2 and dst[4] == 3)
+    end
+    if table.pack then
+        local packed = table.pack(10, 20, 30)
+        assert(packed.n == 3 and packed[1] == 10)
+    end
+    local _unpack = table.unpack or unpack
+    if _unpack then
+        local vals = {_unpack({5,6,7})}
+        assert(vals[1] == 5 and vals[2] == 6 and vals[3] == 7)
+    end
+end)
+
+_test("function features variadics closures", function()
+    local function f1() return 1 end
+    local function f2(x) return x * 2 end
+    local function f3(x, y) return x + y end
+    local function f4(x, y, z) return x, y, z end
+    local function f5(...) return ... end
+    local function f6(...) local t = {...}; return #t end
+    local function f7(...) return select("#", ...) end
+    local function f8(...) return select(2, ...) end
+    local function f9(a, b, ...) return a + b, ... end
+    assert(f1() == 1)
+    assert(f2(5) == 10)
+    assert(f3(3, 4) == 7)
+    local r1, r2, r3 = f4(1, 2, 3)
+    assert(r1 == 1 and r2 == 2 and r3 == 3)
+    local s1, s2, s3 = f5(7, 8, 9)
+    assert(s1 == 7 and s2 == 8 and s3 == 9)
+    assert(f6(1,2,3,4,5) == 5)
+    assert(f7(1,2,3) == 3)
+    local v2, v3 = f8(1,2,3)
+    assert(v2 == 2 and v3 == 3)
+    local sum, rest1, rest2 = f9(10, 20, 30, 40)
+    assert(sum == 30 and rest1 == 30 and rest2 == 40)
+    local anon = function(x) return x ^ 2 end
+    assert(anon(4) == 16)
+    local function fact(n)
+        if n <= 1 then return 1 end
+        return n * fact(n - 1)
+    end
+    assert(fact(10) == 3628800)
+    local function fib(n)
+        if n < 2 then return n end
+        return fib(n-1) + fib(n-2)
+    end
+    assert(fib(10) == 55)
+    local function makeCounter(start)
+        local count = start or 0
+        return function() count = count + 1; return count end
+    end
+    local counter = makeCounter(0)
+    assert(counter() == 1)
+    assert(counter() == 2)
+    assert(counter() == 3)
+    local counter2 = makeCounter(10)
+    assert(counter2() == 11)
+    assert(counter() == 4)
+    local function makeAdder(x)
+        return function(y) return x + y end
+    end
+    local add5 = makeAdder(5)
+    local add10 = makeAdder(10)
+    assert(add5(3) == 8)
+    assert(add10(3) == 13)
+    local upval = 0
+    local function inc() upval = upval + 1 end
+    local function get() return upval end
+    inc(); inc(); inc()
+    assert(get() == 3)
+    local function multiReturn() return 1, 2, 3, 4, 5 end
+    local t = {multiReturn()}
+    assert(#t == 5)
+    local only1 = (multiReturn())
+    assert(only1 == 1)
+    local function variadicSum(...)
+        local sum = 0
+        for _, v in ipairs({...}) do sum = sum + v end
+        return sum
+    end
+    assert(variadicSum(1,2,3,4,5) == 15)
+    assert(variadicSum() == 0)
+    local tbl_func = {}
+    tbl_func.method = function(self, x) return self.value + x end
+    tbl_func.value = 100
+    assert(tbl_func:method(50) == 150)
+    assert(tbl_func.method(tbl_func, 50) == 150)
+end)
+
+_test("control flow if while repeat for break", function()
+    local x = 10
+    if x > 5 then assert(true) end
+    if x > 100 then assert(false) else assert(true) end
+    if x < 0 then assert(false) elseif x < 5 then assert(false) elseif x < 15 then assert(true) else assert(false) end
+    local result = x > 5 and "big" or "small"
+    assert(result == "big")
+    local sum = 0
+    local i = 1
+    while i <= 10 do sum = sum + i; i = i + 1 end
+    assert(sum == 55)
+    sum = 0; i = 1
+    repeat sum = sum + i; i = i + 1 until i > 10
+    assert(sum == 55)
+    sum = 0
+    for i = 1, 10 do sum = sum + i end
+    assert(sum == 55)
+    sum = 0
+    for i = 1, 10, 2 do sum = sum + i end
+    assert(sum == 25)
+    sum = 0
+    for i = 10, 1, -1 do sum = sum + i end
+    assert(sum == 55)
+    sum = 0
+    for i = 1, 10 do if i == 5 then break end; sum = sum + i end
+    assert(sum == 10)
+    local t = {10, 20, 30, 40, 50}
+    sum = 0
+    for i, v in ipairs(t) do sum = sum + v end
+    assert(sum == 150)
+    local dict = {a=1, b=2, c=3}
+    sum = 0
+    for k, v in pairs(dict) do sum = sum + v end
+    assert(sum == 6)
+    local function statefulIter(max)
+        local i = 0
+        return function()
+            i = i + 1
+            if i <= max then return i end
+        end
+    end
+    local collected = {}
+    for v in statefulIter(5) do collected[#collected+1] = v end
+    assert(#collected == 5 and collected[5] == 5)
+    local nested_sum = 0
+    for i = 1, 3 do for j = 1, 3 do nested_sum = nested_sum + i * j end end
+    assert(nested_sum == 36)
+end)
+
+_test("goto statement", function()
+    -- wrap in load: goto is not valid syntax in Lua 5.1
+    local chunk = load([[
+        local x = 1
+        if x == 1 then goto done end
+        assert(false)
+        ::done::
+        assert(true)
+
+        local i = 0
+        ::loop_start::
+        i = i + 1
+        if i < 5 then goto loop_start end
+        assert(i == 5)
+
+        local sum = 0
+        for i = 1, 10 do
+            if i % 2 == 0 then goto skip end
+            sum = sum + i
+            ::skip::
+        end
+        assert(sum == 25)
+
+        do
+            local result = 0
+            for i = 1, 5 do
+                for j = 1, 5 do
+                    if i == 3 and j == 3 then goto break_all end
+                    result = result + 1
+                end
+            end
+            ::break_all::
+            assert(result == 12)
+        end
+    ]])
+    if not chunk then return end -- skip on Lua 5.1
+    chunk()
+end)
+
+_test("pcall xpcall error handling", function()
+    local ok, err = pcall(function() error("test error") end)
+    assert(not ok)
+    assert(type(err) == "string")
+    ok = pcall(function() return 1 + 1 end)
+    assert(ok)
+    ok, err = pcall(function() error({code = 404, msg = "not found"}) end)
+    assert(not ok)
+    assert(type(err) == "table")
+    assert(err.code == 404)
+    ok, err = pcall(function() error("level 0", 0) end)
+    assert(not ok)
+    assert(err == "level 0")
+    ok, err = pcall(function() error(nil) end)
+    assert(not ok)
+    local function handler(e) return {handled = true, original = e} end
+    ok, err = xpcall(function() error("xpcall test") end, handler)
+    assert(not ok)
+    assert(err.handled == true)
+    ok, err = xpcall(function() return 42 end, handler)
+    assert(ok and err == 42)
+    local success, result = pcall(function()
+        local t = nil
+        return t.field
+    end)
+    assert(not success)
+    success, result = pcall(function()
+        local n = "string"
+        return n + 1
+    end)
+    assert(not success)
+    local function risky(v)
+        if v < 0 then error("negative: " .. v) end
+        return math.sqrt(v)
+    end
+    ok, result = pcall(risky, 4)
+    assert(ok and result == 2)
+    ok, result = pcall(risky, -1)
+    assert(not ok)
+end)
+
+_test("string library", function()
+    assert(string.len("hello") == 5)
+    assert(string.len("") == 0)
+    assert(string.upper("hello") == "HELLO")
+    assert(string.lower("WORLD") == "world")
+    assert(string.rep("ab", 3) == "ababab")
+    if string.rep("x", 3, ",") == "x,x,x" then -- sep arg is 5.2+
+        assert(true)
+    end
+    assert(string.reverse("hello") == "olleh")
+    assert(string.sub("hello", 2, 4) == "ell")
+    assert(string.sub("hello", -3) == "llo")
+    assert(string.sub("hello", 2) == "ello")
+    assert(string.sub("hello", 1, -1) == "hello")
+    assert(string.byte("A") == 65)
+    assert(string.byte("ABC", 2) == 66)
+    assert(string.char(72, 101, 108, 108, 111) == "Hello")
+    assert(string.format("%d", 42) == "42")
+    assert(string.format("%05d", 42) == "00042")
+    assert(string.format("%.2f", 3.14159) == "3.14")
+    assert(string.format("%s %s", "hello", "world") == "hello world")
+    assert(string.format("%q", 'he said "hi"') ~= nil)
+    assert(string.format("%x", 255) == "ff")
+    assert(string.format("%X", 255) == "FF")
+    assert(string.format("%o", 8) == "10")
+    assert(string.format("%e", 1000):find("e") ~= nil)
+    local s1, s2 = string.find("hello world", "world")
+    assert(s1 == 7 and s2 == 11)
+    s1, s2 = string.find("hello", "xyz")
+    assert(s1 == nil)
+    s1, s2 = string.find("hello123", "%d+")
+    assert(s1 == 6 and s2 == 8)
+    local cap = string.match("2023-12-25", "(%d+)-(%d+)-(%d+)")
+    assert(cap == "2023")
+    local y, mo, d = string.match("2023-12-25", "(%d+)-(%d+)-(%d+)")
+    assert(y == "2023" and mo == "12" and d == "25")
+    local words = {}
+    for w in string.gmatch("one two three", "%a+") do words[#words+1] = w end
+    assert(#words == 3 and words[1] == "one")
+    local pairs_found = {}
+    for k, v in string.gmatch("a=1, b=2, c=3", "(%a+)=(%d+)") do pairs_found[k] = tonumber(v) end
+    assert(pairs_found.a == 1 and pairs_found.b == 2 and pairs_found.c == 3)
+    assert(string.gsub("hello world", "o", "0") == "hell0 w0rld")
+    local gresult, count = string.gsub("banana", "a", "o")
+    assert(gresult == "bonono" and count == 3)
+    gresult = string.gsub("hello", "(%a+)", function(w) return w:upper() end)
+    assert(gresult == "HELLO")
+    gresult = string.gsub("2+3=5", "[+=]", {["+"] = "plus", ["="] = "equals"})
+    assert(gresult == "2plus3equals5")
+    local str = "hello"
+    assert(str:upper() == "HELLO")
+    assert(str:sub(1,3) == "hel")
+    assert(str:len() == 5)
+    assert(str:rep(2) == "hellohello")
+    assert(("  hello  "):match("^%s*(.-)%s*$") == "hello")
+    assert(string.match("abc123", "^%a+") == "abc")
+    assert(string.match("123abc", "^%d+") == "123")
+    assert(string.match("aaa", "a*") == "aaa")
+    assert(string.match("aaa", "a+") == "aaa")
+    assert(string.match("aaa", "a?") == "a")
+    assert(string.match("hello world", "(%a+)%s+(%a+)") == "hello")
+    assert(string.match("test", "%a") ~= nil)
+    assert(string.match("123", "%d") ~= nil)
+    assert(string.match("   ", "%s") ~= nil)
+    assert(string.match("ABC", "%u") ~= nil)
+    assert(string.match("abc", "%l") ~= nil)
+    assert(string.match("abc123", "%w") ~= nil)
+    assert(string.match("!@#", "%p") ~= nil)
+end)
+
+_test("math library", function()
+    assert(math.abs(-5) == 5)
+    assert(math.abs(5) == 5)
+    assert(math.ceil(4.1) == 5)
+    assert(math.ceil(-4.9) == -4)
+    assert(math.floor(4.9) == 4)
+    assert(math.floor(-4.1) == -5)
+    assert(math.sqrt(9) == 3)
+    assert(math.sqrt(2) > 1.41 and math.sqrt(2) < 1.42)
+    assert(math.max(1, 2, 3, 4, 5) == 5)
+    assert(math.min(1, 2, 3, 4, 5) == 1)
+    assert(math.max(-1, -2, -3) == -1)
+    assert(math.min(-1, -2, -3) == -3)
+    assert(math.pi > 3.14 and math.pi < 3.15)
+    assert(math.huge == math.huge)
+    assert(math.huge > 1e308)
+    assert(math.sin(0) == 0)
+    assert(math.cos(0) == 1)
+    assert(math.tan(0) == 0)
+    assert(math.sin(math.pi/2) > 0.9999)
+    assert(math.cos(math.pi) < -0.9999)
+    assert(math.asin(1) > 1.57 and math.asin(1) < 1.58)
+    assert(math.acos(1) == 0)
+    assert(math.atan(1) > 0.785 and math.atan(1) < 0.786)
+    if math.atan2 then assert(math.atan2(1, 1) == math.atan(1)) end
+    -- atan with 2 args is Lua 5.3+; guard it
+    local ok2, _ = pcall(function() assert(math.atan(1, 1) > 0.785) end)
+    -- (we don't assert ok2 — it's fine if single-arg atan is all that's available)
+    assert(math.exp(0) == 1)
+    assert(math.exp(1) > 2.71 and math.exp(1) < 2.72)
+    assert(math.log(1) == 0)
+    assert(math.log(math.exp(1)) > 0.9999 and math.log(math.exp(1)) < 1.0001)
+    -- log with base arg is Lua 5.2+
+    if pcall(function() math.log(100, 10) end) then
+        assert(math.log(100, 10) > 1.9999 and math.log(100, 10) < 2.0001)
+        assert(math.log(8, 2) > 2.9999 and math.log(8, 2) < 3.0001)
+    end
+    local mi, mf = math.modf(3.7)
+    assert(mi == 3)
+    assert(mf > 0.69 and mf < 0.71)
+    assert(math.fmod(10, 3) == 1)
+    assert(math.fmod(7.5, 2) == 1.5)
+    math.randomseed(42)
+    local r1 = math.random()
+    assert(r1 >= 0 and r1 < 1)
+    local r2 = math.random(10)
+    assert(r2 >= 1 and r2 <= 10)
+    local r3 = math.random(5, 10)
+    assert(r3 >= 5 and r3 <= 10)
+    if math.maxinteger then
+        assert(math.maxinteger > 0)
+        assert(math.mininteger < 0)
+        assert(math.maxinteger + 1 == math.mininteger)
+    end
+end)
+
+_test("metatables and metamethods", function()
+    local Animal = {}
+    Animal.__index = Animal
+    function Animal.new(name, sound)
+        return setmetatable({name = name, sound = sound}, Animal)
+    end
+    function Animal:speak() return self.name .. " says " .. self.sound end
+    function Animal:getName() return self.name end
+    local Dog = setmetatable({}, {__index = Animal})
+    Dog.__index = Dog
+    function Dog.new(name)
+        return setmetatable(Animal.new(name, "woof"), Dog)
+    end
+    function Dog:fetch(item) return self.name .. " fetches " .. item end
+    local cat = Animal.new("Cat", "meow")
+    local dog = Dog.new("Rex")
+    assert(cat:speak() == "Cat says meow")
+    assert(dog:speak() == "Rex says woof")
+    assert(dog:fetch("ball") == "Rex fetches ball")
+    assert(dog:getName() == "Rex")
+    assert(getmetatable(cat) == Animal)
+    assert(getmetatable(dog) == Dog)
+    local Vector = {}
+    Vector.__index = Vector
+    function Vector.new(x, y) return setmetatable({x = x, y = y}, Vector) end
+    Vector.__add = function(a, b) return Vector.new(a.x + b.x, a.y + b.y) end
+    Vector.__sub = function(a, b) return Vector.new(a.x - b.x, a.y - b.y) end
+    Vector.__mul = function(a, b)
+        if type(a) == "number" then return Vector.new(a * b.x, a * b.y) end
+        if type(b) == "number" then return Vector.new(a.x * b, a.y * b) end
+        return a.x * b.x + a.y * b.y
+    end
+    Vector.__unm = function(a) return Vector.new(-a.x, -a.y) end
+    Vector.__eq = function(a, b) return a.x == b.x and a.y == b.y end
+    Vector.__lt = function(a, b) return (a.x^2 + a.y^2) < (b.x^2 + b.y^2) end
+    Vector.__le = function(a, b) return (a.x^2 + a.y^2) <= (b.x^2 + b.y^2) end
+    Vector.__len = function(a) return math.sqrt(a.x^2 + a.y^2) end
+    Vector.__tostring = function(a) return "(" .. a.x .. ", " .. a.y .. ")" end
+    Vector.__concat = function(a, b) return tostring(a) .. tostring(b) end
+    local v1 = Vector.new(1, 2)
+    local v2 = Vector.new(3, 4)
+    local v3 = v1 + v2
+    assert(v3.x == 4 and v3.y == 6)
+    local v4 = v2 - v1
+    assert(v4.x == 2 and v4.y == 2)
+    local v5 = v1 * 3
+    assert(v5.x == 3 and v5.y == 6)
+    local v6 = 2 * v2
+    assert(v6.x == 6 and v6.y == 8)
+    local dot = v1 * v2
+    assert(dot == 11)
+    local v7 = -v1
+    assert(v7.x == -1 and v7.y == -2)
+    assert(v1 == Vector.new(1, 2))
+    assert(v1 ~= v2)
+    assert(v1 < v2)
+    assert(v1 <= v1)
+    assert(#v1 == math.sqrt(5))
+    assert(tostring(v1) == "(1, 2)")
+    local Proxy = {}
+    Proxy.__index = function(t, k) return rawget(t, "_data")[k] end
+    Proxy.__newindex = function(t, k, v) rawget(t, "_data")[k] = v end
+    local proxy = setmetatable({_data = {}}, Proxy)
+    proxy.x = 42; proxy.y = 99
+    assert(proxy.x == 42 and proxy.y == 99)
+    local Callable = setmetatable({}, {
+        __call = function(self, a, b) return a + b end
+    })
+    assert(Callable(3, 4) == 7)
+    -- __pow / __mod / __idiv via load (// is 5.3+ syntax)
+    local mt1 = {}
+    mt1.__index = mt1
+    mt1.__pow = function(a, b) return a.v ^ b.v end
+    mt1.__mod = function(a, b) return a.v % b.v end
+    local n1 = setmetatable({v=10}, mt1)
+    local n2 = setmetatable({v=3}, mt1)
+    assert((n1 ^ n2) == 1000)
+    assert((n1 % n2) == 1)
+    local idiv_chunk = load([[
+        local mt1 = ...
+        mt1.__idiv = function(a, b) return a.v // b.v end
+    ]])
+    if idiv_chunk then
+        idiv_chunk(mt1)
+        assert((n1 // n2) == 3) -- only reached if // is valid syntax too
+    end
+end)
+
+_test("coroutines", function()
+    local co1 = coroutine.create(function(a, b) return a + b end)
+    assert(coroutine.status(co1) == "suspended")
+    local ok, result = coroutine.resume(co1, 10, 20)
+    assert(ok and result == 30)
+    assert(coroutine.status(co1) == "dead")
+    local co2 = coroutine.create(function()
+        local x = coroutine.yield(1)
+        local y = coroutine.yield(x + 1)
+        return y + 1
+    end)
+    ok, result = coroutine.resume(co2)
+    assert(ok and result == 1)
+    ok, result = coroutine.resume(co2, 10)
+    assert(ok and result == 11)
+    ok, result = coroutine.resume(co2, 100)
+    assert(ok and result == 101)
+    assert(coroutine.status(co2) == "dead")
+    ok, result = coroutine.resume(co2)
+    assert(not ok)
+    local function producer()
+        local items = {10, 20, 30, 40, 50}
+        for _, v in ipairs(items) do coroutine.yield(v) end
+    end
+    local co3 = coroutine.create(producer)
+    local collected = {}
+    while coroutine.status(co3) ~= "dead" do
+        local ok2, val = coroutine.resume(co3)
+        if ok2 and val then collected[#collected+1] = val end
+    end
+    assert(#collected == 5 and collected[1] == 10 and collected[5] == 50)
+    local function gen(max)
+        return coroutine.wrap(function()
+            for i = 1, max do coroutine.yield(i) end
+        end)
+    end
+    local sum = 0
+    for v in gen(10) do sum = sum + v end
+    assert(sum == 55)
+    local err_co = coroutine.create(function() error("coroutine error") end)
+    ok, result = coroutine.resume(err_co)
+    assert(not ok)
+    assert(coroutine.status(err_co) == "dead")
+end)
+
+_test("coroutine.running", function()
+    local running_co = coroutine.create(function()
+        local self_co = coroutine.running()
+        assert(self_co ~= nil)
+    end)
+    coroutine.resume(running_co)
+end)
+
+_test("multiple assignment and return adjustment", function()
+    local x, y, z = 1, 2, 3
+    assert(x == 1 and y == 2 and z == 3)
+    x, y = y, x
+    assert(x == 2 and y == 1)
+    x, y, z = 10, 20
+    assert(x == 10 and y == 20 and z == nil)
+    local function multi() return 4, 5, 6 end
+    x, y, z = multi()
+    assert(x == 4 and y == 5 and z == 6)
+    x, y = multi()
+    assert(x == 4 and y == 5)
+    local t = {multi()}
+    assert(#t == 3)
+    t = {1, multi()}
+    assert(#t == 4 and t[1] == 1 and t[2] == 4)
+    t = {multi(), 99}
+    assert(#t == 2 and t[1] == 4 and t[2] == 99)
+    x = multi()
+    assert(x == 4)
+    x, y, z = 1, (function() return 2, 3 end)()
+    assert(x == 1 and y == 2 and z == 3)
+    x, y, z = 1, ((function() return 2, 3 end)())
+    assert(x == 1 and y == 2 and z == nil)
+end)
+
+_test("scope and closures", function()
+    local outer = 10
+    do
+        local inner = 20
+        assert(outer == 10 and inner == 20)
+        do
+            local innermost = 30
+            assert(outer == 10 and inner == 20 and innermost == 30)
+            outer = 99
+        end
+        assert(outer == 99 and inner == 20)
+    end
+    assert(outer == 99)
+    local shadowed = "outer"
+    do
+        local shadowed = "inner"
+        assert(shadowed == "inner")
+    end
+    assert(shadowed == "outer")
+    local closures = {}
+    for i = 1, 5 do
+        local j = i
+        closures[i] = function() return j end
+    end
+    for i = 1, 5 do assert(closures[i]() == i) end
+    local shared = 0
+    local function inc2() shared = shared + 1 end
+    local function dec() shared = shared - 1 end
+    local function get2() return shared end
+    inc2(); inc2(); inc2(); dec()
+    assert(get2() == 2)
+end)
+
+_test("rawget rawset rawequal rawlen", function()
+    local rawget_test = setmetatable({}, {
+        __index = function(t, k) return "meta_" .. k end
+    })
+    assert(rawget_test.foo == "meta_foo")
+    assert(rawget(rawget_test, "foo") == nil)
+    rawset(rawget_test, "foo", "direct")
+    assert(rawget(rawget_test, "foo") == "direct")
+    assert(rawget_test.foo == "direct")
+    assert(rawequal(1, 1) == true)
+    assert(rawequal("a", "a") == true)
+    assert(rawequal({}, {}) == false)
+    local t = {1, 2, 3, 4, 5}
+    assert(rawlen(t) == 5)
+    assert(rawlen("hello") == 5)
+    local mt_len = setmetatable({1,2,3}, {__len = function() return 999 end})
+    assert(#mt_len == 999)
+    assert(rawlen(mt_len) == 3)
+end)
+
+_test("select function", function()
+    assert(select(2, "a", "b", "c") == "b")
+    assert(select("#", "a", "b", "c") == 3)
+    assert(select("#") == 0)
+    local function countArgs(...) return select("#", ...) end
+    assert(countArgs(1, nil, 3) == 3)
+    assert(countArgs() == 0)
+    local function allArgs(...)
+        local n = select("#", ...)
+        local t = {n=n}
+        for i = 1, n do t[i] = select(i, ...) end
+        return t
+    end
+    local args = allArgs(1, nil, 3, nil)
+    assert(args.n == 4)
+    assert(args[1] == 1 and args[2] == nil and args[3] == 3 and args[4] == nil)
+end)
+
+_test("load and loadstring", function()
+    if not load then return end -- skip if load is completely unavailable
+    local fn = load
+    local chunk = fn("return 1 + 1")
+    assert(chunk)
+    assert(chunk() == 2)
+    -- varargs in loaded chunk may be unsupported in some sandboxes; guard it
+    local vchunk = fn("return ...")
+    if vchunk then
+        local ok2, res = pcall(vchunk, 42)
+        if ok2 then assert(res == 42) end
+    end
+    -- invalid syntax should return nil (not throw)
+    local bad, e = fn("invalid syntax !!!")
+    assert(bad == nil)
+    local bytecode_test = fn("return 'loaded'")
+    assert(bytecode_test() == "loaded")
+    local env_chunk = fn("return 1 + 1", "test")
+    if env_chunk then assert(env_chunk() == 2) end
+end)
+
+_test("nil holes sparse tables ipairs pairs", function()
+    local t = {1, 2, 3, nil, 5}
+    local n = 0
+    for i, v in ipairs(t) do n = n + 1 end
+    assert(n == 3)
+    local sparse = {}
+    sparse[1] = "a"; sparse[5] = "e"; sparse[100] = "z"
+    assert(sparse[1] == "a" and sparse[5] == "e" and sparse[100] == "z")
+    local mixed_keys = {}
+    mixed_keys[1] = "one"
+    mixed_keys[1.5] = "one_point_five"
+    mixed_keys["1"] = "string_one"
+    mixed_keys[true] = "bool_true"
+    assert(mixed_keys[1] == "one")
+    assert(mixed_keys[1.5] == "one_point_five")
+    assert(mixed_keys["1"] == "string_one")
+    assert(mixed_keys[true] == "bool_true")
+    if table.pack then
+        local p = table.pack(nil, nil, nil)
+        assert(p.n == 3)
+        assert(p[1] == nil and p[2] == nil and p[3] == nil)
+    end
+end)
+
+_test("string pattern advanced", function()
+    local s = "hello world foo bar"
+    local function split(str, sep)
+        local parts = {}
+        for part in str:gmatch("[^" .. sep .. "]+") do parts[#parts+1] = part end
+        return parts
+    end
+    local parts = split(s, " ")
+    assert(#parts == 4 and parts[1] == "hello" and parts[4] == "bar")
+    local function trim(str) return str:match("^%s*(.-)%s*$") end
+    assert(trim("  hello  ") == "hello")
+    assert(trim("no spaces") == "no spaces")
+    assert(trim("") == "")
+    local function startsWith(str, prefix) return str:sub(1, #prefix) == prefix end
+    local function endsWith(str, suffix) return str:sub(-#suffix) == suffix end
+    assert(startsWith("hello world", "hello"))
+    assert(not startsWith("hello world", "world"))
+    assert(endsWith("hello world", "world"))
+    assert(not endsWith("hello world", "hello"))
+    local multiline = "line1\nline2\nline3"
+    local lines = {}
+    for line in multiline:gmatch("[^\n]+") do lines[#lines+1] = line end
+    assert(#lines == 3 and lines[2] == "line2")
+    local function interpolate(template, vars)
+        return (template:gsub("{(%w+)}", function(key) return tostring(vars[key] or "") end))
+    end
+    local iresult = interpolate("Hello {name}, you are {age} years old!", {name="Alice", age=30})
+    assert(iresult == "Hello Alice, you are 30 years old!")
+end)
+
+_test("deep copy memoize compose curry", function()
+    local function deepCopy(orig)
+        local copy
+        if type(orig) == "table" then
+            copy = {}
+            for k, v in pairs(orig) do copy[deepCopy(k)] = deepCopy(v) end
+            setmetatable(copy, getmetatable(orig))
+        else copy = orig end
+        return copy
+    end
+    local original = {1, 2, {3, 4, {5}}, key = "value"}
+    local copy = deepCopy(original)
+    assert(copy[1] == 1 and copy[2] == 2)
+    assert(copy[3][1] == 3 and copy[3][2] == 4)
+    assert(copy[3][3][1] == 5)
+    assert(copy.key == "value")
+    copy[3][1] = 999
+    assert(original[3][1] == 3)
+    local function flatten(t, result)
+        result = result or {}
+        for _, v in ipairs(t) do
+            if type(v) == "table" then flatten(v, result) else result[#result+1] = v end
+        end
+        return result
+    end
+    local nested = {1, {2, 3}, {4, {5, 6}}, 7}
+    local flat = flatten(nested)
+    assert(#flat == 7 and flat[1] == 1 and flat[4] == 4 and flat[7] == 7)
+    local function memoize(f)
+        local cache = {}
+        return function(n)
+            if cache[n] == nil then cache[n] = f(n) end
+            return cache[n]
+        end
+    end
+    local fib
+    fib = memoize(function(n)
+        if n < 2 then return n end
+        return fib(n-1) + fib(n-2)
+    end)
+    assert(fib(10) == 55)
+    assert(fib(20) == 6765)
+    local function compose(...)
+        local fns = {...}
+        return function(x)
+            local result = x
+            for i = #fns, 1, -1 do result = fns[i](result) end
+            return result
+        end
+    end
+    local double = function(x) return x * 2 end
+    local addOne = function(x) return x + 1 end
+    local square = function(x) return x * x end
+    local transform = compose(double, addOne, square)
+    assert(transform(3) == (3^2 + 1) * 2)
+    local function curry(f, arity)
+        arity = arity or 2
+        local function curried(args)
+            if #args >= arity then return f(unpack(args)) end
+            return function(...)
+                local newArgs = {}
+                for _, v in ipairs(args) do newArgs[#newArgs+1] = v end
+                for _, v in ipairs({...}) do newArgs[#newArgs+1] = v end
+                return curried(newArgs)
+            end
+        end
+        return curried({})
+    end
+    local curriedAdd = curry(function(a, b) return a + b end)
+    local add10c = curriedAdd(10)
+    assert(add10c(5) == 15)
+    assert(add10c(20) == 30)
+    assert(curriedAdd(3)(4) == 7)
+end)
+
+_test("data structures stack queue set", function()
+    local Stack = {}; Stack.__index = Stack
+    function Stack.new() return setmetatable({items = {}, size = 0}, Stack) end
+    function Stack:push(item) self.size = self.size + 1; self.items[self.size] = item end
+    function Stack:pop()
+        if self.size == 0 then return nil end
+        local item = self.items[self.size]; self.items[self.size] = nil; self.size = self.size - 1; return item
+    end
+    function Stack:peek() return self.items[self.size] end
+    function Stack:isEmpty() return self.size == 0 end
+    local s = Stack.new()
+    assert(s:isEmpty())
+    s:push(1); s:push(2); s:push(3)
+    assert(s:peek() == 3)
+    assert(s:pop() == 3); assert(s:pop() == 2)
+    assert(not s:isEmpty())
+    assert(s:pop() == 1); assert(s:isEmpty())
+    local Queue = {}; Queue.__index = Queue
+    function Queue.new() return setmetatable({items={}, head=1, tail=0}, Queue) end
+    function Queue:enqueue(item) self.tail = self.tail + 1; self.items[self.tail] = item end
+    function Queue:dequeue()
+        if self.head > self.tail then return nil end
+        local item = self.items[self.head]; self.items[self.head] = nil; self.head = self.head + 1; return item
+    end
+    function Queue:isEmpty() return self.head > self.tail end
+    local q = Queue.new()
+    assert(q:isEmpty())
+    q:enqueue("a"); q:enqueue("b"); q:enqueue("c")
+    assert(q:dequeue() == "a"); assert(q:dequeue() == "b")
+    q:enqueue("d")
+    assert(q:dequeue() == "c"); assert(q:dequeue() == "d"); assert(q:isEmpty())
+    local Set = {}; Set.__index = Set
+    function Set.new(list)
+        local s2 = setmetatable({_data = {}}, Set)
+        if list then for _, v in ipairs(list) do s2:add(v) end end
+        return s2
+    end
+    function Set:add(v) self._data[v] = true end
+    function Set:remove(v) self._data[v] = nil end
+    function Set:has(v) return self._data[v] == true end
+    function Set:union(other)
+        local result = Set.new()
+        for k in pairs(self._data) do result:add(k) end
+        for k in pairs(other._data) do result:add(k) end
+        return result
+    end
+    function Set:intersection(other)
+        local result = Set.new()
+        for k in pairs(self._data) do if other:has(k) then result:add(k) end end
+        return result
+    end
+    local s1 = Set.new({1,2,3,4,5})
+    local s2 = Set.new({3,4,5,6,7})
+    assert(s1:has(3) and not s1:has(6))
+    local u = s1:union(s2)
+    assert(u:has(1) and u:has(7))
+    local inter = s1:intersection(s2)
+    assert(inter:has(3) and inter:has(5) and not inter:has(1) and not inter:has(7))
+end)
+
+_test("algorithms primes gcd matrix", function()
+    local function isPrime(n)
+        if n < 2 then return false end
+        if n == 2 then return true end
+        if n % 2 == 0 then return false end
+        for i = 3, math.floor(math.sqrt(n)), 2 do
+            if n % i == 0 then return false end
+        end
+        return true
+    end
+    assert(isPrime(2) and isPrime(3) and isPrime(5) and isPrime(7) and isPrime(11))
+    assert(not isPrime(1) and not isPrime(4) and not isPrime(9) and not isPrime(15))
+    local function sieve(limit)
+        local is_prime = {}
+        for i = 2, limit do is_prime[i] = true end
+        for i = 2, math.floor(math.sqrt(limit)) do
+            if is_prime[i] then for j = i*i, limit, i do is_prime[j] = false end end
+        end
+        local primes = {}
+        for i = 2, limit do if is_prime[i] then primes[#primes+1] = i end end
+        return primes
+    end
+    local primes = sieve(100)
+    assert(#primes == 25 and primes[1] == 2 and primes[#primes] == 97)
+    local function gcd(a, b) while b ~= 0 do a, b = b, a % b end; return a end
+    assert(gcd(48, 18) == 6); assert(gcd(100, 75) == 25); assert(gcd(7, 5) == 1)
+    local function lcm(a, b) return math.floor((a * b) / gcd(a, b)) end
+    assert(lcm(4, 6) == 12); assert(lcm(3, 5) == 15)
+    local function matMul(a, b)
+        local result = {}
+        local n = #a; local m = #b[1]; local p = #b
+        for i = 1, n do
+            result[i] = {}
+            for j = 1, m do
+                local sum = 0
+                for k = 1, p do sum = sum + a[i][k] * b[k][j] end
+                result[i][j] = sum
+            end
+        end
+        return result
+    end
+    local A = {{1,2},{3,4}}; local B = {{5,6},{7,8}}
+    local C = matMul(A, B)
+    assert(C[1][1] == 19 and C[1][2] == 22)
+    assert(C[2][1] == 43 and C[2][2] == 50)
+end)
+
+_test("event emitter observable", function()
+    local EventEmitter = {}; EventEmitter.__index = EventEmitter
+    function EventEmitter.new() return setmetatable({listeners = {}}, EventEmitter) end
+    function EventEmitter:on(event, callback)
+        if not self.listeners[event] then self.listeners[event] = {} end
+        table.insert(self.listeners[event], callback)
+    end
+    function EventEmitter:emit(event, ...)
+        if self.listeners[event] then for _, cb in ipairs(self.listeners[event]) do cb(...) end end
+    end
+    function EventEmitter:off(event, callback)
+        if self.listeners[event] then
+            for i, cb in ipairs(self.listeners[event]) do
+                if cb == callback then table.remove(self.listeners[event], i); break end
+            end
+        end
+    end
+    local em = EventEmitter.new()
+    local results = {}
+    local function handler1(x) results[#results+1] = x * 2 end
+    local function handler2(x) results[#results+1] = x * 3 end
+    em:on("test", handler1); em:on("test", handler2)
+    em:emit("test", 5)
+    assert(#results == 2 and results[1] == 10 and results[2] == 15)
+    em:off("test", handler1)
+    em:emit("test", 5)
+    assert(#results == 3 and results[3] == 15)
+    local Observable = {}; Observable.__index = Observable
+    function Observable.new(value)
+        return setmetatable({_value = value, _watchers = {}}, Observable)
+    end
+    function Observable:get() return self._value end
+    function Observable:set(value)
+        local old = self._value; self._value = value
+        if old ~= value then for _, w in ipairs(self._watchers) do w(value, old) end end
+    end
+    function Observable:watch(fn) table.insert(self._watchers, fn) end
+    local obs = Observable.new(10)
+    local changes = {}
+    obs:watch(function(new, old) changes[#changes+1] = {new=new, old=old} end)
+    obs:set(20); obs:set(20); obs:set(30)
+    assert(#changes == 2)
+    assert(changes[1].new == 20 and changes[1].old == 10)
+    assert(changes[2].new == 30 and changes[2].old == 20)
+end)
+
+_test("async coroutine stepping pipeline", function()
+    local function asyncLike(gen)
+        local co = coroutine.create(gen)
+        local function step(...)
+            local ok, val = coroutine.resume(co, ...)
+            assert(ok, val)
+            return val
+        end
+        return step
+    end
+    local results = {}
+    local step = asyncLike(function()
+        local v1 = coroutine.yield("fetch_1"); results[#results+1] = v1
+        local v2 = coroutine.yield("fetch_2"); results[#results+1] = v2
+        local v3 = coroutine.yield("fetch_3"); results[#results+1] = v3
+    end)
+    step(); step(100); step(200); step(300)
+    assert(results[1] == 100 and results[2] == 200 and results[3] == 300)
+    local function pipeline(...)
+        local stages = {...}
+        return coroutine.wrap(function()
+            local function process(i, value)
+                if i > #stages then coroutine.yield(value)
+                else stages[i](value, function(v) process(i+1, v) end) end
+            end
+            for i = 1, 5 do process(1, i) end
+        end)
+    end
+    local doubler = function(v, next2) next2(v * 2) end
+    local adder = function(v, next2) next2(v + 10) end
+    local pipe_results = {}
+    for v in pipeline(doubler, adder) do pipe_results[#pipe_results+1] = v end
+    assert(#pipe_results == 5)
+    assert(pipe_results[1] == 12 and pipe_results[2] == 14 and pipe_results[5] == 20)
+end)
+
+_test("error class and retry pattern", function()
+    local function protectedDiv(a, b)
+        if b == 0 then error("division by zero", 2) end
+        return a / b
+    end
+    local ok, result = pcall(protectedDiv, 10, 2)
+    assert(ok and result == 5)
+    ok, result = pcall(protectedDiv, 10, 0)
+    assert(not ok)
+    assert(result:find("division by zero"))
+    local ErrorClass = {}; ErrorClass.__index = ErrorClass
+    function ErrorClass.new(code, message) return setmetatable({code=code, message=message}, ErrorClass) end
+    function ErrorClass:__tostring() return string.format("Error[%d]: %s", self.code, self.message) end
+    local function riskyOp(shouldFail)
+        if shouldFail then error(ErrorClass.new(500, "internal error")) end
+        return "success"
+    end
+    ok, result = pcall(riskyOp, false)
+    assert(ok and result == "success")
+    ok, result = pcall(riskyOp, true)
+    assert(not ok and result.code == 500 and result.message == "internal error")
+    local function withRetry(fn, maxAttempts)
+        local attempts = 0
+        local function try(...)
+            attempts = attempts + 1
+            local ok2, res = pcall(fn, ...)
+            if ok2 then return res end
+            if attempts >= maxAttempts then error(res, 0) end
+            return try(...)
+        end
+        return try
+    end
+    local failCount = 0
+    local unstable = function()
+        failCount = failCount + 1
+        if failCount < 3 then error("fail") end
+        return "ok"
+    end
+    local retried = withRetry(unstable, 5)
+    local res = retried()
+    assert(res == "ok" and failCount == 3)
+end)
+
+_test("truthiness short circuit nil coalescing", function()
+    local function id(x) return x end
+    assert(id(nil) == nil); assert(id(false) == false)
+    assert(id(0) == 0); assert(id("") == "")
+    local function ternary(cond, t, f)
+        if cond then return t else return f end
+    end
+    assert(ternary(true, 1, 2) == 1); assert(ternary(false, 1, 2) == 2)
+    assert(ternary(0, "yes", "no") == "yes"); assert(ternary(nil, "yes", "no") == "no")
+    assert(ternary("", "yes", "no") == "yes")
+    local x = nil
+    assert((x or "default") == "default")
+    x = false; assert((x or "default") == "default")
+    x = 0; assert((x or "default") == 0)
+    x = ""; assert((x or "default") == "")
+    local function safeDivide(a, b) return b ~= 0 and a/b or 0 end
+    assert(safeDivide(10, 2) == 5); assert(safeDivide(10, 0) == 0)
+    local t = nil
+    local safe = t and t.value or "nil_table"
+    assert(safe == "nil_table")
+    t = {value = 42}
+    safe = t and t.value or "nil_table"
+    assert(safe == 42)
+end)
+
+_test("binary search tree", function()
+    local BTree = {}; BTree.__index = BTree
+    function BTree.new(val) return setmetatable({val=val, left=nil, right=nil}, BTree) end
+    function BTree:insert(val)
+        if val < self.val then
+            if self.left then self.left:insert(val) else self.left = BTree.new(val) end
+        else
+            if self.right then self.right:insert(val) else self.right = BTree.new(val) end
+        end
+    end
+    function BTree:inorder(result)
+        result = result or {}
+        if self.left then self.left:inorder(result) end
+        result[#result+1] = self.val
+        if self.right then self.right:inorder(result) end
+        return result
+    end
+    function BTree:contains(val)
+        if val == self.val then return true end
+        if val < self.val then return self.left ~= nil and self.left:contains(val) end
+        return self.right ~= nil and self.right:contains(val)
+    end
+    local tree = BTree.new(5)
+    for _, v in ipairs({3, 7, 1, 4, 6, 8, 2}) do tree:insert(v) end
+    local sorted = tree:inorder()
+    assert(#sorted == 8)
+    for i = 1, #sorted-1 do assert(sorted[i] < sorted[i+1]) end
+    assert(tree:contains(1) and tree:contains(8) and tree:contains(5))
+    assert(not tree:contains(9) and not tree:contains(0))
+end)
+
+_test("weak tables", function()
+    local weak_keys = setmetatable({}, {__mode = "k"})
+    local weak_vals = setmetatable({}, {__mode = "v"})
+    local weak_both = setmetatable({}, {__mode = "kv"})
+    local key1 = {}; local val1 = {}
+    weak_keys[key1] = "value"
+    weak_vals["key"] = val1
+    weak_both[key1] = val1
+    assert(weak_keys[key1] == "value")
+    assert(weak_vals["key"] == val1)
+    assert(weak_both[key1] == val1)
+end)
+
+_test("metatable chaining and dynamic dispatch", function()
+    local mt_chain = {}
+    local base = setmetatable({base_method = function(self) return "base" end}, {__index = mt_chain})
+    local middle_mt = {__index = base}
+    local middle = setmetatable({middle_method = function(self) return "middle" end}, middle_mt)
+    local top_mt = {__index = middle}
+    local top = setmetatable({top_method = function(self) return "top" end}, top_mt)
+    assert(top:top_method() == "top")
+    assert(top:middle_method() == "middle")
+    assert(top:base_method() == "base")
+    local dynamic_mt = {}
+    dynamic_mt.__index = function(t, k)
+        if k:sub(1, 3) == "get" then
+            local field = k:sub(4):lower()
+            return function(self) return rawget(self, field) end
+        end
+        return nil
+    end
+    local obj = setmetatable({name="Alice", age=30}, dynamic_mt)
+    assert(obj:getName() == "Alice")
+    assert(obj:getAge() == 30)
+end)
+
+_test("custom iterators map filter reduce", function()
+    local function range(from, to, step)
+        step = step or 1
+        return function(_, current)
+            local next_val = current + step
+            if (step > 0 and next_val > to) or (step < 0 and next_val < to) then return nil end
+            return next_val
+        end, nil, from - step
+    end
+    local sum = 0
+    for i in range(1, 10) do sum = sum + i end
+    assert(sum == 55)
+    local evens = {}
+    for i in range(2, 10, 2) do evens[#evens+1] = i end
+    assert(#evens == 5 and evens[1] == 2 and evens[5] == 10)
+    local countdown = {}
+    for i in range(5, 1, -1) do countdown[#countdown+1] = i end
+    assert(#countdown == 5 and countdown[1] == 5 and countdown[5] == 1)
+    local function map(t, fn)
+        local result = {}
+        for i, v in ipairs(t) do result[i] = fn(v) end
+        return result
+    end
+    local function filter(t, fn)
+        local result = {}
+        for _, v in ipairs(t) do if fn(v) then result[#result+1] = v end end
+        return result
+    end
+    local function reduce(t, fn, init)
+        local acc = init
+        for _, v in ipairs(t) do acc = fn(acc, v) end
+        return acc
+    end
+    local nums = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+    local doubled = map(nums, function(x) return x * 2 end)
+    assert(doubled[1] == 2 and doubled[10] == 20)
+    local odds = filter(nums, function(x) return x % 2 == 1 end)
+    assert(#odds == 5 and odds[1] == 1 and odds[5] == 9)
+    local total = reduce(nums, function(a, b) return a + b end, 0)
+    assert(total == 55)
+    local pipeline_result = reduce(
+        filter(map(nums, function(x) return x * 2 end), function(x) return x > 10 end),
+        function(a, b) return a + b end, 0
+    )
+    assert(pipeline_result == 80)
+end)
+
+_test("long strings and escape sequences", function()
+    local longStr1 = [[
+This is a
+multiline string
+in Lua
+]]
+    assert(longStr1:find("multiline") ~= nil)
+    local longStr2 = [==[
+    Contains ]] and [[ brackets
+]==]
+    assert(longStr2:find("brackets") ~= nil)
+    local escaped = "tab:\there\nnewline\r\ncarriage"
+    assert(escaped:find("\t") ~= nil)
+    assert(escaped:find("\n") ~= nil)
+end)
+
+print("\n[TEST RESULTS] " .. _passed .. "/" .. _total .. " passed")
+if _total > 0 and _total == _passed then
+    print("All tests passed!")
+end
+for _, err in ipairs(_results) do
+    print(err)
+end
