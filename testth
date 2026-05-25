@@ -7,6 +7,7 @@ local M = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurassh
 
 local Options = Library.Options
 local Toggles = Library.Toggles
+local LP = game:GetService("Players").LocalPlayer
 
 Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
@@ -49,6 +50,54 @@ task.spawn(function()
 		M.updateESP()
 	end
 end)
+
+local function forceCleanup()
+	-- ESP
+	pcall(function()
+		local folder = workspace:FindFirstChild("Zombies_Local")
+		if folder then
+			for _, zombie in ipairs(folder:GetChildren()) do
+				local h = zombie:FindFirstChildOfClass("Highlight")
+				if h then h:Destroy() end
+			end
+		end
+	end)
+	-- Fly
+	pcall(function()
+		local char = LP.Character
+		if char then
+			local root = char:FindFirstChild("HumanoidRootPart")
+			if root then
+				local bv = root:FindFirstChildOfClass("BodyVelocity")
+				if bv then bv:Destroy() end
+			end
+		end
+	end)
+	-- Invisibility
+	pcall(function()
+		local inv = workspace:FindFirstChild("invischair")
+		if inv then inv:Destroy() end
+		local char = LP.Character
+		if char then
+			for _, part in pairs(char:GetDescendants()) do
+				if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+					part.Transparency = 0
+				end
+			end
+		end
+	end)
+	-- Noclip + WalkSpeed
+	pcall(function()
+		local char = LP.Character
+		if char then
+			for _, part in ipairs(char:GetDescendants()) do
+				if part:IsA("BasePart") then part.CanCollide = true end
+			end
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if hum then hum.WalkSpeed = 16 end
+		end
+	end)
+end
 
 CombatGroup:AddToggle("AutoKill", {
 	Text    = "Automatic shooting",
@@ -244,10 +293,12 @@ SaveManager:LoadAutoloadConfig()
 Library:SetDPIScale(100)
 
 Library:OnUnload(function()
-	M.cleanup()
+	forceCleanup()
 end)
 
 local function showExpiredPopup(onDone)
+	forceCleanup()
+
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "CW_Expired"
 	ScreenGui.ResetOnSpawn = false
