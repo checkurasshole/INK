@@ -119,3 +119,29 @@ local function showExpiredPopup(onDone)
 		if onDone then onDone() end -- fires Library:Unload()
 	end)
 end
+
+-- =============================================
+-- If user has a valid key, disable free mode
+-- and clear the key flag so it's not reused
+-- =============================================
+if _G.COMBOWICK_KEY then
+	_G.COMBOWICK_FREE   = false
+	_G.COMBOWICK_ACTIVE = nil
+	_G.COMBOWICK_KEY    = false
+end
+
+-- =============================================
+-- If running in free mode, start the session
+-- timer — waits until COMBOWICK_ACTIVE is set
+-- to false externally, then shows the popup
+-- which cleans up everything and unloads
+-- =============================================
+if _G.COMBOWICK_FREE then
+	_G.COMBOWICK_ACTIVE = true
+	task.spawn(function()
+		repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
+		showExpiredPopup(function()
+			Library:Unload()
+		end)
+	end)
+end
