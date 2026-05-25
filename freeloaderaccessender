@@ -1,4 +1,7 @@
 local function showExpiredPopup(onDone)
+    _G.COMBOWICK_ACTIVE = false
+    _G.COMBOWICK_FREE = false
+
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "CW_Expired"
     ScreenGui.ResetOnSpawn = false
@@ -11,7 +14,6 @@ local function showExpiredPopup(onDone)
     Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     Frame.BorderSizePixel = 0
     Frame.Parent = ScreenGui
-
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
 
     local Stroke = Instance.new("UIStroke", Frame)
@@ -49,6 +51,7 @@ local function showExpiredPopup(onDone)
     Button.TextSize = 12
     Button.Font = Enum.Font.GothamBold
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+
     Button.MouseButton1Click:Connect(function()
         pcall(function() setclipboard("https://combowick.com/verify/provider-select") end)
         Button.Text = "Copied!"
@@ -72,13 +75,24 @@ local function showExpiredPopup(onDone)
         Frame:TweenPosition(UDim2.new(0.5, -140, 0, -150), Enum.EasingDirection.In, Enum.EasingStyle.Quint, 0.4, true)
         task.wait(0.5)
         ScreenGui:Destroy()
+
+        task.spawn(function()
+            local ok, s = pcall(function()
+                return game:HttpGet("https://raw.githubusercontent.com/checkurasshole/Script/main/MainLoader1")
+            end)
+            if ok and s and #s > 0 then
+                local chunk = loadstring(s)
+                if chunk then pcall(chunk) end
+            end
+        end)
+
         if onDone then onDone() end
     end)
 end
 
 if _G.COMBOWICK_KEY then
     _G.COMBOWICK_FREE = false
-    _G.COMBOWICK_ACTIVE = nil
+    _G.COMBOWICK_ACTIVE = false
     _G.COMBOWICK_KEY = false
 end
 
@@ -86,8 +100,12 @@ if _G.COMBOWICK_FREE then
     _G.COMBOWICK_ACTIVE = true
     task.spawn(function()
         repeat task.wait(1) until _G.COMBOWICK_ACTIVE == false
-        showExpiredPopup(function()
+        if not _G.COMBOWICK_KEY then
+            showExpiredPopup(function()
+                Library:Unload()
+            end)
+        else
             Library:Unload()
-        end)
+        end
     end)
 end
