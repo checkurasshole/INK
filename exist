@@ -1,4 +1,5 @@
--- combowick unified loader (module inlined)
+if _G.COMBOWICK_ACTIVE then return end
+
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local HttpService  = game:GetService("HttpService")
 local Players      = game:GetService("Players")
@@ -570,9 +571,19 @@ end
 local preCheck = checkSession(hwid)
 if preCheck == nil or preCheck.status == "game_not_allowed" then return end
 
-if preCheck.status == "session_active" then
+if preCheck.status == "session_active" or preCheck.status == "allowed" then
     local token = preCheck.session_token
     if type(token) == "string" and #token >= 20 then
+        local remaining = tonumber(preCheck.remaining) or 0
+        _G.COMBOWICK_FREE   = true
+        _G.COMBOWICK_ACTIVE = true
+        task.spawn(function()
+            while remaining > 0 do
+                task.wait(1)
+                remaining -= 1
+            end
+            _G.COMBOWICK_ACTIVE = false
+        end)
         local scriptUrl = getScriptForGame(token)
         if loadFreeScript(scriptUrl, token) then return end
     end
@@ -670,17 +681,12 @@ KeyGroup:AddButton({
         end
         local ok = VaultModule.validateKey(key, hwid, Library)
         if ok then
-            task.wait(1)
-            VaultModule.resetCache(hwid)
-            whitelisted, matchData, errorType = VaultModule.isClientIdWhitelisted(hwid, encryptedHWID)
-            if whitelisted then
-                Library:Notify({Title="🔓 Loading", Description="Loading premium script...", Time=2})
-                VaultModule.startSessionMonitoring(hwid)
-                getgenv().VaultReady = true
-                execPremiumScript()
-                task.wait(2)
-                Library:Unload()
-            end
+            Library:Notify({Title="🔓 Loading", Description="Loading premium script...", Time=2})
+            VaultModule.startSessionMonitoring(hwid)
+            getgenv().VaultReady = true
+            execPremiumScript()
+            task.wait(2)
+            Library:Unload()
         end
     end,
 })
@@ -731,7 +737,7 @@ task.spawn(function()
                     task.wait(1)
                     remaining -= 1
                 end
-                timerLabel:SetText("Session expired. Re-execute.")
+                timerLabel:SetText("Session expired.")
                 lSession:SetText("Session time: expired")
                 _G.COMBOWICK_ACTIVE = false
                 Library:Unload()
@@ -757,10 +763,10 @@ task.spawn(function()
                 task.wait(1)
                 remaining -= 1
             end
-            timerLabel:SetText("Cooldown done! Re-execute.")
+            timerLabel:SetText("Cooldown done!")
             lCooldown:SetText("Cooldown: done")
             hintLabel:SetText("")
-            Library:Notify({Title="COMBOWICK", Description="Cooldown finished! Re-execute.", Time=4})
+            Library:Notify({Title="COMBOWICK", Description="Cooldown finished! Reloading...", Time=3})
             Library:Unload()
             task.wait(0.5)
             reloadExist()
@@ -777,8 +783,11 @@ task.spawn(function()
                 task.wait(1)
                 remaining -= 1
             end
-            timerLabel:SetText("Ready. Re-execute.")
+            timerLabel:SetText("Reloading...")
             hintLabel:SetText("")
+            Library:Unload()
+            task.wait(0.5)
+            reloadExist()
         end)
 
     elseif result.status == "disabled" then
