@@ -6,8 +6,8 @@ local RbxAnalytics = game:GetService("RbxAnalyticsService")
 local RunService   = game:GetService("RunService")
 local LocalPlayer  = Players.LocalPlayer
 
-local _jsonDecode_ref   = HttpService.JSONDecode
-local _jsonEncode_ref   = HttpService.JSONEncode
+local _jsonDecode_ref  = HttpService.JSONDecode
+local _jsonEncode_ref  = HttpService.JSONEncode
 local rawequal_original = rawequal
 local _request = request or (syn and syn.request) or http_request
 
@@ -30,6 +30,8 @@ end
 -- ════════════════════════════════════════════════════════════════
 
 local VaultModule = {}
+
+-- ─── url builders ────────────────────────────────────────────────
 
 local function getValidationApiUrl()
     return table.concat({
@@ -78,31 +80,33 @@ local function getVersionUrl()
     })
 end
 
+-- ─── config ──────────────────────────────────────────────────────
+
 local SECRET_KEY = HttpService:GenerateGUID(false)
 local b64chars   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 VaultModule.CONFIG = {
-    VERSION               = "1.3.4",
-    MIN_VERSION           = "1.3.3",
-    HTTP_TIMEOUT          = 15,
-    VALIDATION_API_URL    = getValidationApiUrl(),
-    SUPABASE_URL          = getVaultSupabaseUrl(),
-    SUPABASE_ANON_KEY     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHhvc3VybWNweHJsbXhja2tlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA0MjQ2NzQsImV4cCI6MjA2NjAwMDY3NH0.F6y_yw26UOJPGDFyhBQ0u__QNf0FPzL2uwbuGhntWYQ",
-    CACHE_FILE            = "hwid_cache.json",
-    KEY_FILE              = "validation_key.dat",
-    MASTER_KEY            = "checkdeezfuckingnuts",
-    VERSION_URL           = getVersionUrl(),
+    VERSION              = "1.3.4",
+    MIN_VERSION          = "1.3.3",
+    HTTP_TIMEOUT         = 15,
+    VALIDATION_API_URL   = getValidationApiUrl(),
+    SUPABASE_URL         = getVaultSupabaseUrl(),
+    SUPABASE_ANON_KEY    = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybHhvc3VybWNweHJsbXhja2tlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA0MjQ2NzQsImV4cCI6MjA2NjAwMDY3NH0.F6y_yw26UOJPGDFyhBQ0u__QNf0FPzL2uwbuGhntWYQ",
+    CACHE_FILE           = "hwid_cache.json",
+    KEY_FILE             = "validation_key.dat",
+    MASTER_KEY           = "checkdeezfuckingnuts",
+    VERSION_URL          = getVersionUrl(),
     VERSION_TOKEN_FALLBACK = "VAULT_1_3_4_AUTH",
-    MAX_RETRIES           = 3,
-    RETRY_DELAY           = 0.5,
+    MAX_RETRIES          = 3,
+    RETRY_DELAY          = 0.5,
 }
 
 VaultModule.VALIDATION_STATE = {
-    authenticated  = false,
-    sessionToken   = nil,
-    lastValidation = 0,
-    tamperChecks   = 0,
-    failedAttempts = 0,
+    authenticated   = false,
+    sessionToken    = nil,
+    lastValidation  = 0,
+    tamperChecks    = 0,
+    failedAttempts  = 0,
 }
 
 VaultModule.RATE_LIMIT = {
@@ -116,6 +120,8 @@ VaultModule.ORIGINAL_FUNCTIONS = {
     httpRequest = nil,
     HttpGet     = nil,
 }
+
+-- ─── core helpers ────────────────────────────────────────────────
 
 function VaultModule.httpRequest(options)
     if not VaultModule.ORIGINAL_FUNCTIONS.httpRequest then
@@ -194,6 +200,8 @@ function VaultModule.trim(s)
     return (s or ""):match("^%s*(.-)%s*$") or ""
 end
 
+-- ─── key file ────────────────────────────────────────────────────
+
 function VaultModule.saveKey(key)
     if not writefile then return false end
     return pcall(function()
@@ -223,6 +231,8 @@ function VaultModule.deleteKey()
         if isfile(VaultModule.CONFIG.KEY_FILE) then delfile(VaultModule.CONFIG.KEY_FILE) end
     end)
 end
+
+-- ─── cache ───────────────────────────────────────────────────────
 
 function VaultModule.loadCache()
     if not isfile then return nil end
@@ -265,6 +275,8 @@ function VaultModule.resetCache(clientId)
     VaultModule.saveCache(cache)
 end
 
+-- ─── tamper / rate limit ─────────────────────────────────────────
+
 function VaultModule.performTamperCheck()
     VaultModule.VALIDATION_STATE.tamperChecks += 1
     local cur = request or http_request or (syn and syn.request)
@@ -275,7 +287,7 @@ function VaultModule.performTamperCheck()
 end
 
 function VaultModule.checkRateLimit()
-    local now   = os.time()
+    local now = os.time()
     local fresh = {}
     for _, t in ipairs(VaultModule.RATE_LIMIT.attempts) do
         if now - t < VaultModule.RATE_LIMIT.windowSeconds then table.insert(fresh, t) end
@@ -289,6 +301,8 @@ function VaultModule.checkRateLimit()
     return true
 end
 
+-- ─── HWID / key validation ───────────────────────────────────────
+
 function VaultModule.checkSupabaseHWID(clientId, encryptedClientId)
     local url = VaultModule.CONFIG.SUPABASE_URL
         .. "/rest/v1/keys?hwid=eq." .. HttpService:UrlEncode(encryptedClientId)
@@ -296,7 +310,7 @@ function VaultModule.checkSupabaseHWID(clientId, encryptedClientId)
 
     local ok, resp = pcall(function()
         return VaultModule.httpRequest({
-            Url    = url,
+            Url = url,
             Method = "GET",
             Headers = {
                 ["apikey"]        = VaultModule.CONFIG.SUPABASE_ANON_KEY,
@@ -321,9 +335,9 @@ function VaultModule.checkSupabaseHWID(clientId, encryptedClientId)
     end
 
     return true, {
-        source    = "supabase",
-        key       = kd.key_value,
-        username  = kd.username,
+        source   = "supabase",
+        key      = kd.key_value,
+        username = kd.username,
         expires_at = kd.expires_at,
         is_global_timer_dependent = kd.is_global_timer_dependent,
     }, nil
@@ -331,11 +345,13 @@ end
 
 function VaultModule.isClientIdWhitelisted(clientId, encryptedClientId)
     if not VaultModule.performTamperCheck() then return false, nil, "tamper_detected" end
+
     local cacheData = VaultModule.getCacheData(clientId)
     if cacheData.accessDenied then
         if os.time() - (cacheData.lastCheck or 0) < 3600 then return false, nil, "access_denied" end
         VaultModule.resetCache(clientId)
     end
+
     local found, matchData, errType = VaultModule.checkSupabaseHWID(clientId, encryptedClientId)
     if errType == "access_denied" or errType == "key_expired" then
         VaultModule.setAccessDenied(clientId, true)
@@ -371,10 +387,10 @@ function VaultModule.validateKey(key, clientId, Library)
 
     local pok, data = pcall(function() return HttpService:JSONDecode(resp.Body or resp) end)
     if pok and data and data.success then
-        VaultModule.VALIDATION_STATE.sessionToken   = VaultModule.generateSessionToken(clientId)
-        VaultModule.VALIDATION_STATE.authenticated  = true
-        VaultModule.VALIDATION_STATE.lastValidation = os.time()
-        VaultModule.VALIDATION_STATE.failedAttempts = 0
+        VaultModule.VALIDATION_STATE.sessionToken    = VaultModule.generateSessionToken(clientId)
+        VaultModule.VALIDATION_STATE.authenticated   = true
+        VaultModule.VALIDATION_STATE.lastValidation  = os.time()
+        VaultModule.VALIDATION_STATE.failedAttempts  = 0
         Library:Notify({Title="✅ Success", Description="Key validated!", Time=3})
         pcall(function()
             VaultModule.httpRequest({
@@ -399,6 +415,8 @@ function VaultModule.validateKey(key, clientId, Library)
     Library:Notify({Title="❌ Failed", Description="Invalid key or HWID.", Time=5})
     return false
 end
+
+-- ─── version check ───────────────────────────────────────────────
 
 function VaultModule.compareVersions(v1, v2)
     local a = {v1:match("(%d+)%.(%d+)%.(%d+)")}
@@ -468,6 +486,7 @@ VaultModule.memoryCleanup = {
     connections      = {},
     cleanup_interval = 30,
     last_cleanup     = tick(),
+
     addConnection = function(self, conn)
         table.insert(self.connections, conn)
     end,
@@ -509,6 +528,7 @@ local FREE_ANON_KEY     = table.concat({"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.",
 local SCRIPT_MAP_URL    = table.concat({string.char(104,116,116,112,115,58,47,47),"hwid-huddle","-time.lovable",".app/api/scripts"})
 local FREE_SCRIPT_URL   = table.concat({string.char(104,116,116,112,115,58,47,47),"hwid-huddle","-time.lovable",".app/api/public/script"})
 local KEY_URL           = "https://combowick.com/verify/provider-select"
+local EXIST_URL         = "https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/exist"
 
 local VALID_STATUSES = {allowed=true,session_active=true,cooldown=true,banned=true,game_not_allowed=true,throttled=true,disabled=true,error=true}
 
@@ -621,7 +641,8 @@ local encryptedHWID = VaultModule.encrypt(hwid, VaultModule.CONFIG.MASTER_KEY)
 
 VaultModule.VALIDATION_STATE.sessionToken = VaultModule.generateSessionToken("init")
 
--- step 1: premium key check
+-- ─── step 1: premium key check ───────────────────────────────────
+
 local whitelisted, matchData, errorType = VaultModule.isClientIdWhitelisted(hwid, encryptedHWID)
 
 if whitelisted then
@@ -634,10 +655,12 @@ if whitelisted then
         execPremiumScript()
         return
     end
+    -- version failed → fall through to free tier
     whitelisted = false
 end
 
--- step 2: free session fast-path
+-- ─── step 2: free session fast-path ──────────────────────────────
+
 local preCheck = checkSession(hwid)
 if preCheck == nil or preCheck.status == "game_not_allowed" then return end
 
@@ -649,7 +672,8 @@ if preCheck.status == "session_active" then
     end
 end
 
--- step 3: unified GUI
+-- ─── step 3: unified GUI ─────────────────────────────────────────
+
 do
     local guiName = "LinoriaGui"
     local target  = gethui and gethui() or game:GetService("CoreGui")
@@ -683,6 +707,7 @@ local Tabs = {
     UI   = Window:AddTab("UI Settings", "settings"),
 }
 
+-- free info
 local preRemaining = tonumber(preCheck.remaining) or 0
 local preStatus    = preCheck.status
 
@@ -720,6 +745,7 @@ local statusLabel = StatusGroup:AddLabel("Checking...", true)
 local timerLabel  = StatusGroup:AddLabel("", true)
 local hintLabel   = StatusGroup:AddLabel("", true)
 
+-- premium key input
 local keyInputValue = VaultModule.loadKey() or ""
 
 local KeyGroup = Tabs.Key:AddLeftGroupbox("Enter Your Key")
@@ -774,6 +800,7 @@ HWIDGroup:AddButton({
     end,
 })
 
+-- free session async (mirrors doc 3 status flow exactly)
 task.spawn(function()
     for i = 5, 1, -1 do
         statusLabel:SetText(string.format("Loading in %ds...", i))
@@ -805,6 +832,9 @@ task.spawn(function()
                 end
                 timerLabel:SetText("Session expired. Re-execute.")
                 lSession:SetText("Session time: expired")
+                -- Reload the exist script to show GUI again
+                local ok, s = pcall(function() return game:HttpGet(EXIST_URL) end)
+                if ok and s and #s > 0 then pcall(loadstring(s)) end
                 _G.COMBOWICK_ACTIVE = false
                 task.wait(0.5)
                 Library:Unload()
@@ -820,10 +850,6 @@ task.spawn(function()
         statusLabel:SetText("On Cooldown")
         hintLabel:SetText("Get an 11hr key or wait it out.")
         Library:Notify({Title="COMBOWICK", Description="On cooldown! Get a key to skip.", Time=6})
-        task.spawn(function()
-            task.wait(5)
-            Library:Unload()
-        end)
         task.spawn(function()
             while remaining > 0 do
                 local fmt = formatTime(remaining)
@@ -868,6 +894,7 @@ task.spawn(function()
     end
 end)
 
+-- UI settings
 local MenuGroup = Tabs.UI:AddLeftGroupbox("Menu", "wrench")
 MenuGroup:AddToggle("ShowCustomCursor", {
     Text     = "Custom Cursor",
