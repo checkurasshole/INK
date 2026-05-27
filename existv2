@@ -1,0 +1,380 @@
+if _G.COMBOWICK_ACTIVE then return end
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+
+-- !! swap for wherever you upload CombowickCore.lua !!
+local Core = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/loudestt"))()
+
+local VaultModule       = Core.VaultModule
+local getHWID           = Core.getHWID
+local formatTime        = Core.formatTime
+local execPremiumScript = Core.execPremiumScript
+
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+local _jsonDecode_ref   = HttpService.JSONDecode
+local _jsonEncode_ref   = HttpService.JSONEncode
+local rawequal_original = rawequal
+local _request = request or (syn and syn.request) or http_request
+
+local FREE_SUPABASE_URL = table.concat({string.char(104,116,116,112,115,58,47,47),"zgqjncrelglx","cawifdeb",".supabase.co"})
+local FREE_ANON_KEY     = table.concat({"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.","eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpn","cWpuY3JlbGdseGNhd2lmZGViIiwicm9sZSI6","ImFub24iLCJpYXQiOjE3NzgyMjI4NzYsImV4","cCI6MjA5Mzc5ODg3Nn0.7er3nopYG__5XCBl","6rlfX1ZN231i2TlhQRnYUElqtwA"})
+local SCRIPT_MAP_URL    = table.concat({string.char(104,116,116,112,115,58,47,47),"hwid-huddle","-time.lovable",".app/api/scripts"})
+local FREE_SCRIPT_URL   = table.concat({string.char(104,116,116,112,115,58,47,47),"hwid-huddle","-time.lovable",".app/api/public/script"})
+local KEY_URL           = "https://combowick.com/verify/provider-select"
+local EXIST_URL         = "https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/exist"
+
+local VALID_STATUSES = {allowed=true,session_active=true,cooldown=true,banned=true,game_not_allowed=true,throttled=true,disabled=true,error=true}
+
+local function checkSession(hwid)
+    if not rawequal_original(HttpService.JSONDecode, _jsonDecode_ref) then return nil end
+    if not _request then return nil end
+    local t = os.clock()
+    local ok, res = pcall(function()
+        return _request({
+            Url    = FREE_SUPABASE_URL .. "/rest/v1/rpc/check_hwid",
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["apikey"]        = FREE_ANON_KEY,
+                ["Authorization"] = "Bearer " .. FREE_ANON_KEY,
+            },
+            Body = _jsonEncode_ref(HttpService, {
+                p_hwid    = VaultModule.encrypt(hwid, VaultModule.CONFIG.MASTER_KEY),
+                p_game_id = tostring(game.PlaceId),
+            }),
+        })
+    end)
+    if not ok or not res then return nil end
+    if (os.clock() - t) < 0.005 then return nil end
+    if res.StatusCode ~= 200 then return nil end
+    local dok, data = pcall(_jsonDecode_ref, HttpService, res.Body)
+    if not dok or type(data) ~= "table" then return nil end
+    if type(data.status) ~= "string" or not VALID_STATUSES[data.status] then return nil end
+    return data
+end
+
+local function getScriptForGame(token)
+    local ok, res = pcall(function()
+        return _request({Url=SCRIPT_MAP_URL, Method="GET", Headers={["X-Session-Token"]=token}})
+    end)
+    if not ok or not res or res.StatusCode ~= 200 then return FREE_SCRIPT_URL end
+    local dok, data = pcall(_jsonDecode_ref, HttpService, res.Body)
+    if not dok or type(data) ~= "table" then return FREE_SCRIPT_URL end
+    local gid = tostring(game.PlaceId)
+    return data[gid] or data["default"] or FREE_SCRIPT_URL
+end
+
+local function loadFreeScript(url, token)
+    local ok, s = pcall(function()
+        return _request({
+            Url     = url,
+            Method  = "GET",
+            Headers = token and {["X-Session-Token"]=token} or {},
+        })
+    end)
+    if not ok or not s or s.StatusCode ~= 200 then return false end
+    local chunk = loadstring(s.Body)
+    if not chunk then return false end
+    pcall(chunk)
+    return true
+end
+
+local function reloadExist()
+    local ok, s = pcall(function() return game:HttpGet(EXIST_URL) end)
+    if ok and s and #s > 0 then pcall(loadstring(s)) end
+end
+
+local hwid          = getHWID()
+local encryptedHWID = VaultModule.encrypt(hwid, VaultModule.CONFIG.MASTER_KEY)
+VaultModule.VALIDATION_STATE.sessionToken = VaultModule.generateSessionToken("init")
+
+-- premium whitelist check
+local whitelisted, matchData, errorType = VaultModule.isClientIdWhitelisted(hwid, encryptedHWID)
+if whitelisted then
+    local versionValid, versionMsg, fetchedToken = VaultModule.checkVersionAndToken()
+    if versionValid then
+        _G.VaultInitialized  = true
+        _G.VaultVersionToken = fetchedToken
+        VaultModule.startSessionMonitoring(hwid)
+        getgenv().VaultReady = true
+        execPremiumScript()
+        return
+    end
+    whitelisted = false
+end
+
+-- free session precheck
+local preCheck = checkSession(hwid)
+if preCheck == nil or preCheck.status == "game_not_allowed" then return end
+
+-- early exit only when session valid AND game not disabled
+if (preCheck.status == "session_active" or preCheck.status == "allowed") and not preCheck.disabled then
+    local token = preCheck.session_token
+    if type(token) == "string" and #token >= 20 then
+        local remaining = tonumber(preCheck.remaining) or 0
+        _G.COMBOWICK_FREE   = true
+        _G.COMBOWICK_ACTIVE = true
+        task.spawn(function()
+            while remaining > 0 do
+                task.wait(1)
+                remaining -= 1
+            end
+            _G.COMBOWICK_ACTIVE = false
+            task.wait(0.5)
+            reloadExist()
+        end)
+        local scriptUrl = getScriptForGame(token)
+        if loadFreeScript(scriptUrl, token) then return end
+    end
+end
+-- disabled games fall through to GUI below
+
+do
+    local guiName = "LinoriaGui"
+    local target  = gethui and gethui() or game:GetService("CoreGui")
+    for _, v in ipairs(target:GetChildren()) do
+        if v.Name == guiName then pcall(v.Destroy, v) end
+    end
+    if gethui then
+        for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
+            if v.Name == guiName then pcall(v.Destroy, v) end
+        end
+    end
+end
+
+local Library      = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager  = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local Options      = Library.Options
+
+local Window = Library:CreateWindow({
+    Title            = "COMBOWICK",
+    Footer           = "free version",
+    NotifySide       = "Right",
+    ShowCustomCursor = false,
+    AutoShow         = true,
+    Size             = UDim2.fromOffset(560, 340),
+})
+
+local Tabs = {
+    Main = Window:AddTab("Main",        "user"),
+    Key  = Window:AddTab("Premium Key", "key"),
+    UI   = Window:AddTab("UI Settings", "settings"),
+}
+
+local preRemaining = tonumber(preCheck.remaining) or 0
+local preStatus    = preCheck.status
+local gameDisabled = preCheck.disabled == true
+
+local InfoGroup = Tabs.Main:AddLeftGroupbox("Free Session", "info")
+local lSession  = InfoGroup:AddLabel(
+    (not gameDisabled and (preStatus == "allowed" or preStatus == "session_active") and preRemaining > 0)
+        and string.format("Session time: %s", formatTime(preRemaining)) or "Session time: —", true)
+local lCooldown = InfoGroup:AddLabel(
+    (preStatus == "cooldown" and preRemaining > 0)
+        and string.format("Cooldown: %s", formatTime(preRemaining)) or "Cooldown: —", true)
+
+if gameDisabled then
+    InfoGroup:AddLabel("⛔ Free not available in this game.", true)
+else
+    InfoGroup:AddLabel("Not every game has the free feature.", true)
+end
+
+InfoGroup:AddDivider()
+InfoGroup:AddLabel("Upgrade to 11hr key — no cooldown!", true)
+InfoGroup:AddButton({
+    Text    = "Copy Key Link",
+    Func    = function()
+        pcall(function() setclipboard(KEY_URL) end)
+        Library:Notify({Title="COMBOWICK", Description="Link copied! Paste in browser.", Time=4})
+    end,
+    Tooltip = "combowick.com/verify/provider-select",
+})
+InfoGroup:AddDivider()
+InfoGroup:AddButton({
+    Text = "Copy Encrypted HWID",
+    Func = function()
+        pcall(function() setclipboard(encryptedHWID) end)
+        Library:Notify({Title="COMBOWICK", Description="Encrypted HWID copied.", Time=3})
+    end,
+})
+InfoGroup:AddDivider()
+InfoGroup:AddButton({Text="Unload", Func=function() Library:Unload() end})
+
+local StatusGroup = Tabs.Main:AddRightGroupbox("Status", "shield")
+local statusLabel = StatusGroup:AddLabel("Checking...", true)
+local timerLabel  = StatusGroup:AddLabel("", true)
+local hintLabel   = StatusGroup:AddLabel("", true)
+
+local keyInputValue = VaultModule.loadKey() or ""
+
+local KeyGroup = Tabs.Key:AddLeftGroupbox("Enter Your Key")
+KeyGroup:AddInput("KeyInput", {
+    Default          = keyInputValue,
+    Numeric          = false,
+    Finished         = true,
+    ClearTextOnFocus = false,
+    Text             = "Key 🔑",
+    Placeholder      = "Paste your key here...",
+    Callback         = function(v) keyInputValue = v end,
+})
+KeyGroup:AddButton({
+    Text = "✅ Submit Key",
+    Func = function()
+        local key = VaultModule.trim(keyInputValue)
+        if key == "" then
+            Library:Notify({Title="⚠️ Empty Key", Description="Please enter a key.", Time=3})
+            return
+        end
+        local ok = VaultModule.validateKey(key, hwid, Library)
+        if ok then
+            Library:Notify({Title="🔓 Loading", Description="Loading premium script...", Time=2})
+            VaultModule.startSessionMonitoring(hwid)
+            getgenv().VaultReady = true
+            execPremiumScript()
+            task.wait(2)
+            Library:Unload()
+        end
+    end,
+})
+KeyGroup:AddButton({
+    Text = "🔗 Get Key",
+    Func = function()
+        pcall(function() setclipboard(KEY_URL) end)
+        Library:Notify({Title="Copied", Description="Key link copied.", Time=2})
+    end,
+})
+
+local HWIDGroup = Tabs.Key:AddRightGroupbox("Your HWID")
+HWIDGroup:AddLabel({Text=hwid, DoesWrap=true})
+HWIDGroup:AddButton({
+    Text = "📋 Copy HWID",
+    Func = function()
+        pcall(function() setclipboard(hwid) end)
+        Library:Notify({Title="Copied", Description="HWID copied.", Time=2})
+    end,
+})
+
+task.spawn(function()
+    for i = 5, 1, -1 do
+        statusLabel:SetText(string.format("Loading in %ds...", i))
+        task.wait(1)
+    end
+    statusLabel:SetText("Authenticating...")
+
+    local result = checkSession(hwid)
+
+    if result == nil then
+        statusLabel:SetText("Status: Failed")
+        Library:Notify({Title="COMBOWICK", Description="Session check failed.", Time=5})
+
+    elseif result.status == "allowed" or result.status == "session_active" then
+        if result.disabled then
+            statusLabel:SetText("⛔ Game Disabled")
+            hintLabel:SetText("Free not available here. Get a key!")
+            Library:Notify({Title="COMBOWICK", Description="Free session disabled for this game. Use a key!", Time=6})
+            return
+        end
+        local token = result.session_token
+        if type(token) ~= "string" or #token < 20 then
+            statusLabel:SetText("Status: Failed")
+        else
+            statusLabel:SetText("Status: Authenticated!")
+            Library:Notify({Title="COMBOWICK", Description="Authenticated!", Time=3})
+            local remaining = tonumber(result.remaining) or 0
+            task.spawn(function()
+                while remaining > 0 do
+                    local fmt = formatTime(remaining)
+                    timerLabel:SetText(string.format("Session: %s left", fmt))
+                    lSession:SetText(string.format("Session time: %s", fmt))
+                    task.wait(1)
+                    remaining -= 1
+                end
+                timerLabel:SetText("Session expired.")
+                lSession:SetText("Session time: expired")
+                _G.COMBOWICK_ACTIVE = false
+                Library:Unload()
+                task.wait(0.5)
+                reloadExist()
+            end)
+            _G.COMBOWICK_FREE   = true
+            _G.COMBOWICK_ACTIVE = true
+            local scriptUrl = getScriptForGame(token)
+            if loadFreeScript(scriptUrl, token) then task.wait(2) Library:Unload() end
+        end
+
+    elseif result.status == "cooldown" then
+        local remaining = tonumber(result.remaining) or 0
+        statusLabel:SetText("On Cooldown")
+        hintLabel:SetText("Get an 11hr key or wait it out.")
+        Library:Notify({Title="COMBOWICK", Description="On cooldown! Get a key to skip.", Time=6})
+        task.spawn(function()
+            while remaining > 0 do
+                local fmt = formatTime(remaining)
+                timerLabel:SetText(string.format("Cooldown: %s", fmt))
+                lCooldown:SetText(string.format("Cooldown: %s", fmt))
+                task.wait(1)
+                remaining -= 1
+            end
+            timerLabel:SetText("Cooldown done!")
+            lCooldown:SetText("Cooldown: done")
+            hintLabel:SetText("")
+            Library:Notify({Title="COMBOWICK", Description="Cooldown finished! Reloading...", Time=3})
+            Library:Unload()
+            task.wait(0.5)
+            reloadExist()
+        end)
+
+    elseif result.status == "throttled" then
+        local remaining = tonumber(result.remaining) or 0
+        statusLabel:SetText("Throttled")
+        hintLabel:SetText("Too many requests. Please wait.")
+        Library:Notify({Title="COMBOWICK", Description="Throttled. Wait a moment.", Time=5})
+        task.spawn(function()
+            while remaining > 0 do
+                timerLabel:SetText(string.format("Retry in: %s", formatTime(remaining)))
+                task.wait(1)
+                remaining -= 1
+            end
+            timerLabel:SetText("Reloading...")
+            hintLabel:SetText("")
+            Library:Unload()
+            task.wait(0.5)
+            reloadExist()
+        end)
+
+    elseif result.status == "disabled" then
+        statusLabel:SetText("Service Paused")
+        hintLabel:SetText("COMBOWICK is temporarily offline.")
+        Library:Notify({Title="COMBOWICK", Description="Service disabled. Try later.", Time=6})
+
+    elseif result.status == "banned" then
+        statusLabel:SetText("Banned")
+        Library:Notify({Title="COMBOWICK", Description="You are banned.", Time=5})
+
+    else
+        statusLabel:SetText("Error")
+        Library:Notify({Title="COMBOWICK", Description=tostring(result.message), Time=5})
+    end
+end)
+
+local MenuGroup = Tabs.UI:AddLeftGroupbox("Menu", "wrench")
+MenuGroup:AddToggle("ShowCustomCursor", {
+    Text     = "Custom Cursor",
+    Default  = false,
+    Callback = function(v) Library.ShowCustomCursor = v end,
+})
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {Default="RightShift", NoUI=true, Text="Menu keybind"})
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({"MenuKeybind"})
+ThemeManager:SetFolder("COMBOWICK")
+SaveManager:SetFolder("COMBOWICK/game")
+SaveManager:BuildConfigSection(Tabs.UI)
+ThemeManager:ApplyToTab(Tabs.UI)
+SaveManager:LoadAutoloadConfig()
