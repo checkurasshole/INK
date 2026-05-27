@@ -23,7 +23,7 @@ local FREE_ANON_KEY     = table.concat({"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.",
 local SCRIPT_MAP_URL    = table.concat({string.char(104,116,116,112,115,58,47,47),"hwid-huddle","-time.lovable",".app/api/scripts"})
 local FREE_SCRIPT_URL   = table.concat({string.char(104,116,116,112,115,58,47,47),"hwid-huddle","-time.lovable",".app/api/public/script"})
 local KEY_URL           = "https://combowick.com/verify/provider-select"
-local EXIST_URL         = "https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/exist"
+local EXIST_URL         = "https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/existv2"
 
 local VALID_STATUSES = {allowed=true,session_active=true,cooldown=true,banned=true,game_not_allowed=true,throttled=true,disabled=true,error=true}
 
