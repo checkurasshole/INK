@@ -3,7 +3,7 @@ if _G.COMBOWICK_ACTIVE then return end
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 
 -- !! swap for wherever you upload CombowickCore.lua !!
-local Core = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/loudestt"))()
+local Core = loadstring(game:HttpGet("https://raw.githubusercontent.com/checkurasshole/INK/refs/heads/main/loudesttt"))()
 
 local VaultModule       = Core.VaultModule
 local getHWID           = Core.getHWID
