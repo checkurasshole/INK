@@ -1,0 +1,1318 @@
+-- https://lua.expert/
+local v1 = script.Parent
+local dark = v1.dark
+local main = v1.main
+local shop = v1.shop
+local bar = shop.bar
+local tools = shop.tools
+local setting = main.setting
+local baseplate = main.baseplate
+local tos = main.tos
+local v2 = main.Folder.dropsample:Clone()
+local scroll = tos.scroll
+local v3 = scroll.sample:Clone()
+local ScrollingFrame = setting.ScrollingFrame
+ScrollingFrame.button:Clone()
+local v4 = ScrollingFrame.toggle:Clone()
+local v5 = ScrollingFrame.drop:Clone()
+local v6 = tools.sample:Clone()
+main.Folder.dropsample:Destroy()
+ScrollingFrame.button:Destroy()
+ScrollingFrame.toggle:Destroy()
+ScrollingFrame.drop:Destroy()
+scroll.sample:Destroy()
+tools.sample:Destroy()
+game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+game:GetService("RunService")
+local v7 = game:GetService("ReplicatedStorage"):FindFirstChild("02_client")
+local v8 = game:GetService("ReplicatedStorage"):FindFirstChild("01_server")
+local Out = Enum.EasingDirection.Out
+local Elastic = Enum.EasingStyle.Elastic
+local v9 = TweenInfo.new(0.3, Enum.EasingStyle.Exponential)
+TweenInfo.new(1, Elastic)
+game:GetService("Workspace")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local LocalPlayer_2 = game:GetService("Players").LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local v10 = ReplicatedStorage:FindFirstChild("01_server")
+local Icon = require(ReplicatedStorage:FindFirstChild("bar").Icon)
+LocalPlayer_2:GetMouse()
+local v11 = os.date("*t")
+local function fn(p1) --[[ fn | Line: 59 ]]
+	local v1 = tostring(p1)
+	local v2 = ""
+	local count = 0
+	for i = #v1, 1, -1 do
+		v2 = string.sub(v1, i, i) .. v2
+		count = count + 1
+		if count % 3 == 0 and i > 1 then
+			v2 = "," .. v2
+		end
+	end
+	return v2
+end
+local v12 = true
+local function f13(p1) --[[ Line: 77 | Upvalues: v12 (ref), main (copy), TweenService (copy), baseplate (copy), v9 (copy), tos (copy), setting (copy), dark (copy), bar (copy), tools (copy), v1 (copy), shop (copy) ]]
+	v12 = not v12
+	if p1 then
+		if main.Visible then
+			TweenService:Create(baseplate, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(baseplate, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(tos, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(tos, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(setting, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(setting, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			TweenService:Create(dark, v9, {
+				BackgroundTransparency = 1
+			}):Play()
+			for k, v in pairs(main.Folder:GetChildren()) do
+				if v:IsA("GuiObject") then
+					v.Visible = false
+				end
+			end
+			main.Visible = false
+		end
+		if v12 then
+			TweenService:Create(bar, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(bar, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(tools, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(tools, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(dark, v9, {
+				BackgroundTransparency = 1
+			}):Play()
+			v1.Enabled = false
+			shop.Visible = false
+		else
+			v1.Enabled = true
+			shop.Visible = true
+			bar.Position = UDim2.new(0.5, 0, 0.5, 0)
+			bar.Size = UDim2.new(0, 0, 0, 0)
+			tools.Position = UDim2.new(0.5, 0, 0.5, 0)
+			tools.Size = UDim2.new(0, 0, 0, 0)
+			TweenService:Create(dark, v9, {
+				BackgroundTransparency = 0.75
+			}):Play()
+			TweenService:Create(bar, v9, {
+				Position = UDim2.new(0.207, 0, 0.189, 0)
+			}):Play()
+			TweenService:Create(bar, v9, {
+				Size = UDim2.new(0.585, 0, 0.091, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(tools, v9, {
+				Position = UDim2.new(0.206, 0, 0.296, 0)
+			}):Play()
+			TweenService:Create(tools, v9, {
+				Size = UDim2.new(0.585, 0, 0.569, 0)
+			}):Play()
+		end
+	else
+		if shop.Visible then
+			TweenService:Create(bar, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(bar, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(tools, v9, {
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}):Play()
+			TweenService:Create(tools, v9, {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+			task.wait(0.2)
+			shop.Visible = false
+		end
+		if not v12 then
+			baseplate.Position = UDim2.new(0.5, 0, 0.5, 0)
+			baseplate.Size = UDim2.new(0, 0, 0, 0)
+			tos.Position = UDim2.new(0.5, 0, 0.5, 0)
+			tos.Size = UDim2.new(0, 0, 0, 0)
+			setting.Position = UDim2.new(0.5, 0, 0.5, 0)
+			setting.Size = UDim2.new(0, 0, 0, 0)
+			main.Visible = true
+			v1.Enabled = true
+			TweenService:Create(dark, v9, {
+				BackgroundTransparency = 0.75
+			}):Play()
+			TweenService:Create(baseplate, v9, {
+				Position = UDim2.new(0.221, 0, 0.262, 0)
+			}):Play()
+			TweenService:Create(baseplate, v9, {
+				Size = UDim2.new(0.291, 0, 0.085, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(tos, v9, {
+				Position = UDim2.new(0.521, 0, 0.307, 0)
+			}):Play()
+			TweenService:Create(tos, v9, {
+				Size = UDim2.new(0.291, 0, 0.415, 0)
+			}):Play()
+			task.wait(0.2)
+			TweenService:Create(setting, v9, {
+				Position = UDim2.new(0.221, 0, 0.37, 0)
+			}):Play()
+			TweenService:Create(setting, v9, {
+				Size = UDim2.new(0.291, 0, 0.4, 0)
+			}):Play()
+			return
+		end
+		TweenService:Create(baseplate, v9, {
+			Position = UDim2.new(0.5, 0, 0.5, 0)
+		}):Play()
+		TweenService:Create(baseplate, v9, {
+			Size = UDim2.new(0, 0, 0, 0)
+		}):Play()
+		task.wait(0.2)
+		TweenService:Create(tos, v9, {
+			Position = UDim2.new(0.5, 0, 0.5, 0)
+		}):Play()
+		TweenService:Create(tos, v9, {
+			Size = UDim2.new(0, 0, 0, 0)
+		}):Play()
+		task.wait(0.2)
+		TweenService:Create(setting, v9, {
+			Position = UDim2.new(0.5, 0, 0.5, 0)
+		}):Play()
+		TweenService:Create(setting, v9, {
+			Size = UDim2.new(0, 0, 0, 0)
+		}):Play()
+		TweenService:Create(dark, v9, {
+			BackgroundTransparency = 1
+		}):Play()
+		for k, v in pairs(main.Folder:GetChildren()) do
+			if v:IsA("GuiObject") then
+				v.Visible = false
+			end
+		end
+		v1.Enabled = false
+		main.Visible = false
+	end
+end
+tos.MouseEnter:Connect(function() --[[ Line: 179 | Upvalues: TweenService (copy), tos (copy), v9 (copy) ]]
+	TweenService:Create(tos.UIScale, v9, {
+		Scale = 1.03
+	}):Play()
+end)
+tos.MouseLeave:Connect(function() --[[ Line: 183 | Upvalues: TweenService (copy), tos (copy), v9 (copy) ]]
+	TweenService:Create(tos.UIScale, v9, {
+		Scale = 1
+	}):Play()
+end)
+baseplate.MouseEnter:Connect(function() --[[ Line: 187 | Upvalues: TweenService (copy), baseplate (copy), v9 (copy) ]]
+	TweenService:Create(baseplate.UIScale, v9, {
+		Scale = 1.03
+	}):Play()
+end)
+baseplate.MouseLeave:Connect(function() --[[ Line: 191 | Upvalues: TweenService (copy), baseplate (copy), v9 (copy) ]]
+	TweenService:Create(baseplate.UIScale, v9, {
+		Scale = 1
+	}):Play()
+end)
+local function f14(p1, p2, p3, p4) --[[ Line: 196 | Upvalues: v6 (copy), tools (copy), TweenService (copy), v9 (copy), LocalPlayer_2 (copy), v8 (copy) ]]
+	local v1 = v6:Clone()
+	v1.Parent = tools
+	v1.icon.Image = p3 or "http://www.roblox.com/asset/?id=6031265976"
+	v1.label.Text = p1 or "error"
+	v1.buy.Text = p2 .. " coins"
+	v1.icon.MouseButton1Click:Connect(function() --[[ Line: 202 | Upvalues: tools (ref), v1 (copy) ]]
+		local v12 = next
+		local v2, v3 = tools:GetDescendants()
+		for v4, v5 in v12, v2, v3 do
+			if v5.Name == "buy" then
+				v5.Visible = false
+			end
+		end
+		v1.buy.Visible = true
+	end)
+	if p4 then
+		v1.event.Visible = true
+		v1.event.BackgroundColor3 = if p4 then p4 else Color3.fromRGB(255, 255, 255)
+	end
+	local v3 = false
+	v1.icon.MouseEnter:Connect(function() --[[ Line: 217 | Upvalues: v3 (ref), TweenService (ref), v1 (copy), v9 (ref), tools (ref) ]]
+		if v3 then
+			return
+		end
+		TweenService:Create(v1, v9, {
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		}):Play()
+		TweenService:Create(v1.label, v9, {
+			TextColor3 = Color3.fromRGB(0, 0, 0)
+		}):Play()
+		TweenService:Create(v1.icon.UIScale, v9, {
+			Scale = 1.03
+		}):Play()
+		local v12 = next
+		local v2, v32 = tools:GetDescendants()
+		for v4, v5 in v12, v2, v32 do
+			if v5.Name == "buy" then
+				v5.Visible = false
+			end
+		end
+		v1.buy.Visible = true
+	end)
+	v1.icon.MouseLeave:Connect(function() --[[ Line: 232 | Upvalues: v3 (ref), TweenService (ref), v1 (copy), v9 (ref), tools (ref) ]]
+		if v3 then
+			return
+		end
+		TweenService:Create(v1, v9, {
+			BackgroundColor3 = Color3.fromRGB(19, 16, 22)
+		}):Play()
+		TweenService:Create(v1.label, v9, {
+			TextColor3 = Color3.fromRGB(255, 255, 255)
+		}):Play()
+		TweenService:Create(v1.icon.UIScale, v9, {
+			Scale = 1
+		}):Play()
+		local v12 = next
+		local v2, v32 = tools:GetDescendants()
+		for v4, v5 in v12, v2, v32 do
+			if v5.Name == "buy" then
+				v5.Visible = false
+			end
+		end
+		v1.buy.Visible = true
+	end)
+	v1.buy.MouseButton1Click:Connect(function() --[[ Line: 247 | Upvalues: v1 (copy), v3 (ref), LocalPlayer_2 (ref), p2 (copy), v8 (ref), p1 (copy), TweenService (ref), v9 (ref) ]]
+		v1.buy.Visible = false
+		v3 = true
+		if p2 <= LocalPlayer_2:FindFirstChild("coins").Value then
+			v8:FireServer("item", p1, p2)
+			TweenService:Create(v1, v9, {
+				BackgroundColor3 = Color3.fromRGB(16, 255, 3)
+			}):Play()
+			task.wait(0.3)
+			TweenService:Create(v1, v9, {
+				BackgroundColor3 = Color3.fromRGB(44, 44, 44)
+			}):Play()
+			TweenService:Create(v1.label, v9, {
+				TextColor3 = Color3.fromRGB(255, 255, 255)
+			}):Play()
+		else
+			TweenService:Create(v1, v9, {
+				BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+			}):Play()
+			task.wait(0.3)
+			TweenService:Create(v1, v9, {
+				BackgroundColor3 = Color3.fromRGB(44, 44, 44)
+			}):Play()
+		end
+		task.wait(0.1)
+		v3 = false
+	end)
+end
+local function f15(p1, p2, p3) --[[ Line: 280 | Upvalues: v4 (copy), ScrollingFrame (copy), TweenService (copy), v9 (copy) ]]
+	local t = {}
+	local v1 = v4:Clone()
+	v1.Parent = ScrollingFrame
+	v1.TextButton.Text = p1
+	local v2 = false
+	v1.TextButton.MouseButton1Click:Connect(function() --[[ Line: 287 | Upvalues: v2 (ref), v1 (copy), p2 (copy) ]]
+		v2 = not v2
+		if v2 then
+			v1.icon.ImageColor3 = Color3.fromRGB(0, 255, 0)
+			pcall(function() --[[ Line: 291 | Upvalues: p2 (ref) ]]
+				p2(true)
+			end)
+		else
+			v1.icon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+			pcall(function() --[[ Line: 296 | Upvalues: p2 (ref) ]]
+				p2(false)
+			end)
+		end
+	end)
+	if (p3 or "") == "disabled" then
+		v1.icon.ImageColor3 = Color3.fromRGB(158, 158, 158)
+		v1.TextButton.Interactable = false
+	end
+	v1.MouseEnter:Connect(function() --[[ Line: 306 | Upvalues: TweenService (ref), v1 (copy), v9 (ref) ]]
+		TweenService:Create(v1.Frame, v9, {
+			Size = UDim2.new(1, 0, 1, 0)
+		}):Play()
+	end)
+	v1.MouseLeave:Connect(function() --[[ Line: 309 | Upvalues: TweenService (ref), v1 (copy), v9 (ref) ]]
+		TweenService:Create(v1.Frame, v9, {
+			Size = UDim2.new(0, 0, 1, 0)
+		}):Play()
+	end)
+	function t.switch(p1, p22) --[[ switch | Line: 313 | Upvalues: v2 (ref), v1 (copy), p2 (copy) ]]
+		v2 = p22
+		if p22 then
+			v1.icon.ImageColor3 = Color3.fromRGB(0, 255, 0)
+			pcall(function() --[[ Line: 317 | Upvalues: p2 (ref) ]]
+				p2(true)
+			end)
+		else
+			v1.icon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+			pcall(function() --[[ Line: 322 | Upvalues: p2 (ref) ]]
+				p2(false)
+			end)
+		end
+	end
+	return t
+end
+local function f16(p1) --[[ Line: 330 | Upvalues: v5 (copy), ScrollingFrame (copy), v2 (copy), main (copy), TweenService (copy), v9 (copy) ]]
+	local v1 = v5:Clone()
+	v1.Parent = ScrollingFrame
+	v1.TextButton.Text = p1
+	local v22 = v2:Clone()
+	v22.Parent = main.Folder
+	v22.Name = p1
+	local v3 = v22.button:Clone()
+	local t = {}
+	v22.button:Destroy()
+	function t.add(p1, p2, p3) --[[ add | Line: 340 | Upvalues: v3 (copy), v22 (copy), TweenService (ref), v9 (ref) ]]
+		local v1 = v3:Clone()
+		v1.Parent = v22
+		v1.Visible = true
+		v1.Text = p2
+		v1.MouseButton1Click:Connect(function() --[[ Line: 345 | Upvalues: p3 (copy) ]]
+			pcall(p3)
+		end)
+		v1.MouseEnter:Connect(function() --[[ Line: 349 | Upvalues: TweenService (ref), v1 (copy), v9 (ref) ]]
+			TweenService:Create(v1, v9, {
+				BackgroundTransparency = 0.7
+			}):Play()
+		end)
+		v1.MouseLeave:Connect(function() --[[ Line: 352 | Upvalues: TweenService (ref), v1 (copy), v9 (ref) ]]
+			TweenService:Create(v1, v9, {
+				BackgroundTransparency = 1
+			}):Play()
+		end)
+	end
+	v1.TextButton.MouseButton1Click:Connect(function() --[[ Line: 357 | Upvalues: v22 (copy), main (ref) ]]
+		if v22.Visible then
+			v22.Visible = false
+			return
+		end
+		for k, v in pairs(main.Folder:GetChildren()) do
+			if v:IsA("GuiObject") then
+				v.Visible = false
+			end
+		end
+		v22.Visible = true
+	end)
+	v1.MouseEnter:Connect(function() --[[ Line: 370 | Upvalues: TweenService (ref), v1 (copy), v9 (ref) ]]
+		TweenService:Create(v1.Frame, v9, {
+			Size = UDim2.new(1, 0, 1, 0)
+		}):Play()
+	end)
+	v1.MouseLeave:Connect(function() --[[ Line: 373 | Upvalues: TweenService (ref), v1 (copy), v9 (ref) ]]
+		TweenService:Create(v1.Frame, v9, {
+			Size = UDim2.new(0, 0, 1, 0)
+		}):Play()
+	end)
+	return t
+end
+local function f17(p1) --[[ Line: 438 ]]
+	if not p1 then
+		return
+	end
+	for v1, v2 in p1:GetDescendants() do
+		if v2:IsA("BasePart") then
+			v2.CollisionGroup = "player"
+		end
+	end
+	p1.DescendantAdded:Connect(function(p1) --[[ Line: 447 ]]
+		if not p1:IsA("BasePart") then
+			return
+		end
+		p1.CollisionGroup = "player"
+	end)
+end
+local t = {}
+function antiflingF(p1) --[[ antiflingF | Line: 455 | Upvalues: t (ref), Players (copy), f17 (copy), LocalPlayer_2 (copy) ]]
+	for v1, v2 in t do
+		if v2 then
+			v2:Disconnect()
+		end
+	end
+	t = {}
+	if p1 then
+		local v3 = Players.PlayerAdded:Connect(function(p1) --[[ Line: 464 | Upvalues: f17 (ref) ]]
+			p1.CharacterAdded:Connect(f17)
+		end)
+		table.insert(t, v3)
+		for v5, v6 in Players:GetPlayers() do
+			if v6.Character then
+				f17(v6.Character)
+			end
+			v6.CharacterAdded:Connect(f17)
+		end
+	else
+		for k, v in pairs(game:GetService("Players"):GetPlayers()) do
+			if v ~= LocalPlayer_2 then
+				local Character = v.Character
+				if Character and Character.Parent then
+					for k2, v2 in pairs(Character:GetDescendants()) do
+						if v2:IsA("BasePart") then
+							v2.CanCollide = false
+							v2.Velocity = Vector3.new(0, 0, 0)
+							v2.RotVelocity = Vector3.new(0, 0, 0)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+if LocalPlayer_2:WaitForChild("coins", 10) then
+	bar.Frame.TextLabel.Text = LocalPlayer_2:FindFirstChild("coins").Value .. " coins"
+	LocalPlayer_2:FindFirstChild("coins").Changed:Connect(function() --[[ Line: 502 | Upvalues: bar (copy), LocalPlayer_2 (copy) ]]
+		bar.Frame.TextLabel.Text = LocalPlayer_2:FindFirstChild("coins").Value .. " coins"
+	end)
+end
+bar.help.ImageButton.MouseButton1Click:Connect(function() --[[ Line: 507 | Upvalues: bar (copy) ]]
+	bar.help.Frame.Visible = not bar.help.Frame.Visible
+end)
+bar["150"].TextButton.MouseButton1Click:Connect(function() --[[ Line: 511 | Upvalues: v8 (copy) ]]
+	v8:FireServer("150")
+end)
+local v18 = nil
+v18 = Icon.new():setImage("http://www.roblox.com/asset/?id=6031280882"):bindEvent("deselected", function() --[[ Line: 518 | Upvalues: f13 (copy), v18 (ref) ]]
+	f13()
+	v18:setLabel("")
+end):oneClick():setCaption("options"):setLabel("options")
+if ReplicatedStorage.game.Value ~= "" and (ReplicatedStorage.game:GetAttribute("owner") and ReplicatedStorage.game:GetAttribute("owner") == LocalPlayer_2.UserId) then
+	Icon.new():setImage("http://www.roblox.com/asset/?id=6034684930"):bindEvent("deselected", function() --[[ Line: 533 | Upvalues: LocalPlayer_2 (copy), v10 (copy) ]]
+		if LocalPlayer_2.PlayerGui:FindFirstChild("map") then
+			LocalPlayer_2.PlayerGui:FindFirstChild("map").Enabled = not LocalPlayer_2.PlayerGui:FindFirstChild("map").Enabled
+		else
+			v10:FireServer("map")
+		end
+	end):oneClick():setCaption("maps"):setAlignment("Right")
+end
+Icon.new():setImage("http://www.roblox.com/asset/?id=6031265976"):bindEvent("deselected", function() --[[ Line: 549 | Upvalues: f13 (copy) ]]
+	f13(true)
+end):oneClick():setCaption("shop")
+v18.ResetOnSpawn = false
+tos.info.MouseButton1Click:Connect(function() --[[ Line: 559 | Upvalues: tos (copy) ]]
+	tos.TextLabel.Visible = not tos.TextLabel.Visible
+end)
+local function f19() --[[ Line: 564 ]]
+	for k, v in pairs(game:GetService("Workspace").Folder:GetChildren()) do
+		v:Destroy()
+	end
+end
+f15("Anti Exploiter Fling\n", function(p1) --[[ Line: 571 | Upvalues: t (ref), Players (copy) ]]
+	if p1 then
+		antiflingF(true)
+		return
+	end
+	for k, v in pairs(t) do
+		if v then
+			v:Disconnect()
+		end
+	end
+	for k, v in pairs(Players:GetPlayers()) do
+		if v.Character then
+			for k2, v2 in pairs(v.Character:GetDescendants()) do
+				if v2:IsA("BasePart") then
+					v2.CollisionGroup = "Default"
+				end
+			end
+		end
+	end
+end)
+if UserInputService.TouchEnabled then
+	local v20 = nil
+	f15("shiftlock", function(p1) --[[ Line: 629 | Upvalues: v20 (ref), LocalPlayer_2 (copy) ]]
+		if p1 then
+			v20 = script.shift:Clone()
+			v20.Parent = LocalPlayer_2.PlayerGui
+			local v1 = next
+			local v2, v3 = v20:GetDescendants()
+			for v4, v5 in v1, v2, v3 do
+				if v5:IsA("Script") then
+					v5.Enabled = true
+				end
+			end
+			v20.Enabled = true
+		else
+			if not v20 then
+				return
+			end
+			v20:Destroy()
+		end
+	end)
+end
+local v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, isMonth_2, _
+if game:GetService("ReplicatedStorage"):FindFirstChild("game").Value == "" then
+	local v35 = f16("maps")
+	ReplicatedStorage:FindFirstChild("03_client")
+	local Folder = game.Workspace.Folder
+	local v36 = nil
+	for k, v in pairs({ "clear", "restore", "not available" }) do
+		v35:add(v, function() --[[ Line: 658 | Upvalues: v36 (ref), Folder (copy), v (copy), f19 (copy) ]]
+			if not v36 then
+				v36 = Folder:FindFirstChildOfClass("Folder"):Clone()
+			end
+			if v == "clear" then
+				f19()
+			end
+			if v ~= "restore" then
+				return
+			end
+			f19()
+			v36:Clone().Parent = Folder
+		end)
+	end
+	local t2 = {
+		"nothing",
+		"empty",
+		"blank",
+		"boring",
+		"just baseplate",
+		"a baseplate",
+		"plain",
+		"no map",
+		"blank",
+		"how to play",
+		"structure"
+	}
+	if LocalPlayer_2:FindFirstChild("leaderstats") then
+		local Minutes = LocalPlayer_2.leaderstats:FindFirstChild("Minutes")
+		if Minutes and (Minutes.Value == 0 and not v36) then
+			local v37 = Folder:FindFirstChildOfClass("Folder"):Clone()
+			f19()
+			local v38 = nil
+			v38 = LocalPlayer_2.Chatted:Connect(function(p1) --[[ Line: 697 | Upvalues: t2 (copy), f19 (copy), v37 (ref), Folder (copy), v38 (ref) ]]
+				for k, v in pairs(t2) do
+					if string.find(string.lower(p1), v) then
+						f19()
+						v37:Clone().Parent = Folder
+						if v38 then
+							v38:Disconnect()
+						end
+						return
+					end
+				end
+			end)
+		else
+			if LocalPlayer_2:FindFirstChild("stat") then
+				v21 = LocalPlayer_2:FindFirstChild("stat"):FindFirstChild("box")
+				v22 = f15
+				v23 = "plain box"
+				v24 = function(p1_2) --[[ Line: 721 | Upvalues: v21 (copy) ]]
+					v21.Value = p1_2
+				end
+				v25 = if v21 then v21.Value or false else false
+				f15(v23, v24, v25)
+			end
+			if LocalPlayer_2:FindFirstChild("leaderstats") then
+				v26 = LocalPlayer_2.leaderstats:FindFirstChild("Minutes")
+				if v26 and v26.Value >= 1000 then
+					v27 = LocalPlayer_2:WaitForChild("stat", 5):FindFirstChild("tags")
+					v28 = f15
+					v29 = "hide own tags"
+					v30 = function(p1_2) --[[ Line: 731 | Upvalues: v8 (copy) ]]
+						v8:FireServer("tags")
+					end
+					v31 = if v27 then v27.Value or false else false
+					f15(v29, v30, v31)
+				end
+			end
+			v32 = game:GetService("Workspace").Baseplate
+			v33 = f16("baseplate")
+			for k2, v in pairs({ "default studs", "grass", "snow", "green studs", "blue studs", "sand", "wood" }) do
+				v33:add(v, function() --[[ Line: 744 | Upvalues: v (copy), v32 (copy) ]]
+					if v == "default studs" then
+						v32.Material = Enum.Material.Plastic
+						v32.Color = Color3.fromRGB(99, 95, 98)
+					end
+					if v == "grass" then
+						v32.Material = Enum.Material.Grass
+						v32.Color = Color3.fromRGB(0, 126, 4)
+					end
+					if v == "snow" then
+						v32.Material = Enum.Material.Snow
+						v32.Color = Color3.fromRGB(176, 176, 176)
+					end
+					if v == "green studs" then
+						v32.Material = Enum.Material.Plastic
+						v32.Color = Color3.fromRGB(75, 151, 75)
+					end
+					if v == "blue studs" then
+						v32.Material = Enum.Material.Plastic
+						v32.Color = Color3.fromRGB(0, 85, 255)
+					end
+					if v == "wood" then
+						v32.Material = Enum.Material.Wood
+						v32.Color = Color3.fromRGB(121, 113, 74)
+					end
+					if v ~= "sand" then
+						return
+					end
+					v32.Material = Enum.Material.Sand
+					v32.Color = Color3.fromRGB(217, 211, 134)
+				end)
+			end
+			v34 = f16("lighting")
+			for k2, v in pairs({ "default", "morning", "afternoon", "evening", "night" }) do
+				v34:add(v, function() --[[ Line: 975 | Upvalues: v (copy) ]]
+					local Lighting = game:GetService("Lighting")
+					for k2, v3 in pairs(Lighting:GetChildren()) do
+						if v3:IsA("Atmosphere") or (v3:IsA("BloomEffect") or (v3:IsA("ColorCorrectionEffect") or (v3:IsA("DepthOfFieldEffect") or v3:IsA("SunRaysEffect")))) then
+							v3:Destroy()
+						end
+					end
+					local Terrain = workspace:FindFirstChildOfClass("Terrain")
+					if Terrain then
+						local Clouds = Terrain:FindFirstChildOfClass("Clouds")
+						if Clouds then
+							Clouds:Destroy()
+						end
+					end
+					if v == "default" then
+						Lighting.Brightness = 2
+						Lighting.ClockTime = 14
+						Lighting.Ambient = Color3.fromRGB(138, 138, 138)
+						Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+						Lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+						Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+						Lighting.EnvironmentDiffuseScale = 0
+						Lighting.EnvironmentSpecularScale = 0
+						Lighting.GlobalShadows = true
+						Lighting.ShadowSoftness = 0.5
+						Lighting.ExposureCompensation = 0
+					end
+					if v == "morning" then
+						Lighting.Brightness = 1.9
+						Lighting.ClockTime = 6.5
+						Lighting.Ambient = Color3.fromRGB(102, 107, 200)
+						Lighting.OutdoorAmbient = Color3.fromRGB(120, 173, 230)
+						Lighting.ColorShift_Top = Color3.fromRGB(255, 240, 210)
+						Lighting.ColorShift_Bottom = Color3.fromRGB(200, 220, 255)
+						Lighting.EnvironmentDiffuseScale = 1.2
+						Lighting.EnvironmentSpecularScale = 1
+						Lighting.GlobalShadows = true
+						Lighting.ShadowSoftness = 0.5
+						Lighting.ExposureCompensation = 0.2
+						local Atmosphere = Instance.new("Atmosphere")
+						Atmosphere.Density = 0.32
+						Atmosphere.Offset = 0.18
+						Atmosphere.Color = Color3.fromRGB(255, 240, 220)
+						Atmosphere.Decay = Color3.fromRGB(170, 200, 255)
+						Atmosphere.Glare = 0.18
+						Atmosphere.Haze = 1
+						Atmosphere.Parent = Lighting
+						local BloomEffect = Instance.new("BloomEffect")
+						BloomEffect.Intensity = 0.95
+						BloomEffect.Size = 30
+						BloomEffect.Threshold = 0.95
+						BloomEffect.Enabled = true
+						BloomEffect.Parent = Lighting
+						local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+						ColorCorrectionEffect.Brightness = 0.15
+						ColorCorrectionEffect.Contrast = 0.28
+						ColorCorrectionEffect.Saturation = 0.18
+						ColorCorrectionEffect.TintColor = Color3.fromRGB(220, 240, 255)
+						ColorCorrectionEffect.Enabled = true
+						ColorCorrectionEffect.Parent = Lighting
+						local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+						DepthOfFieldEffect.FarIntensity = 0.15
+						DepthOfFieldEffect.FocusDistance = 0
+						DepthOfFieldEffect.InFocusRadius = 55
+						DepthOfFieldEffect.NearIntensity = 0.45
+						DepthOfFieldEffect.Enabled = true
+						DepthOfFieldEffect.Parent = Lighting
+						local SunRaysEffect = Instance.new("SunRaysEffect")
+						SunRaysEffect.Intensity = 0.34
+						SunRaysEffect.Spread = 0.75
+						SunRaysEffect.Enabled = true
+						SunRaysEffect.Parent = Lighting
+						if Terrain then
+							local v1 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+							v1.Cover = 0.75
+							v1.Density = 0.28
+							v1.Color = Color3.fromRGB(172, 197, 255)
+							v1.Enabled = true
+							v1.Parent = Terrain
+						end
+					end
+					if v == "afternoon" then
+						Lighting.Brightness = 2
+						Lighting.ClockTime = 13.5
+						Lighting.Ambient = Color3.fromRGB(180, 160, 140)
+						Lighting.OutdoorAmbient = Color3.fromRGB(220, 200, 160)
+						Lighting.ColorShift_Top = Color3.fromRGB(255, 255, 255)
+						Lighting.ColorShift_Bottom = Color3.fromRGB(210, 190, 160)
+						Lighting.EnvironmentDiffuseScale = 1.1
+						Lighting.EnvironmentSpecularScale = 1
+						Lighting.GlobalShadows = true
+						Lighting.ShadowSoftness = 0.45
+						Lighting.ExposureCompensation = 0.34
+						local Atmosphere = Instance.new("Atmosphere")
+						Atmosphere.Density = 0.28
+						Atmosphere.Offset = 0.18
+						Atmosphere.Color = Color3.fromRGB(235, 235, 235)
+						Atmosphere.Decay = Color3.fromRGB(200, 170, 130)
+						Atmosphere.Glare = 0.22
+						Atmosphere.Haze = 0.9
+						Atmosphere.Parent = Lighting
+						local BloomEffect = Instance.new("BloomEffect")
+						BloomEffect.Intensity = 1
+						BloomEffect.Size = 32
+						BloomEffect.Threshold = 0.95
+						BloomEffect.Enabled = true
+						BloomEffect.Parent = Lighting
+						local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+						ColorCorrectionEffect.Brightness = 0.14
+						ColorCorrectionEffect.Contrast = 0.28
+						ColorCorrectionEffect.Saturation = 0.18
+						ColorCorrectionEffect.TintColor = Color3.fromRGB(255, 230, 200)
+						ColorCorrectionEffect.Enabled = true
+						ColorCorrectionEffect.Parent = Lighting
+						local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+						DepthOfFieldEffect.FarIntensity = 0.12
+						DepthOfFieldEffect.FocusDistance = 0
+						DepthOfFieldEffect.InFocusRadius = 65
+						DepthOfFieldEffect.NearIntensity = 0.4
+						DepthOfFieldEffect.Enabled = true
+						DepthOfFieldEffect.Parent = Lighting
+						local SunRaysEffect = Instance.new("SunRaysEffect")
+						SunRaysEffect.Intensity = 0.38
+						SunRaysEffect.Spread = 0.88
+						SunRaysEffect.Enabled = true
+						SunRaysEffect.Parent = Lighting
+						if Terrain then
+							local v2 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+							v2.Cover = 0.4
+							v2.Density = 0.22
+							v2.Color = Color3.fromRGB(255, 240, 210)
+							v2.Enabled = true
+							v2.Parent = Terrain
+						end
+					end
+					if v == "evening" then
+						Lighting.Brightness = 1.6
+						Lighting.ClockTime = 17.6
+						Lighting.Ambient = Color3.fromRGB(140, 90, 70)
+						Lighting.OutdoorAmbient = Color3.fromRGB(200, 100, 60)
+						Lighting.ColorShift_Top = Color3.fromRGB(255, 150, 100)
+						Lighting.ColorShift_Bottom = Color3.fromRGB(120, 70, 50)
+						Lighting.EnvironmentDiffuseScale = 1
+						Lighting.EnvironmentSpecularScale = 0.9
+						Lighting.GlobalShadows = true
+						Lighting.ShadowSoftness = 0.4
+						Lighting.ExposureCompensation = 0.15
+						local Atmosphere = Instance.new("Atmosphere")
+						Atmosphere.Density = 0.45
+						Atmosphere.Offset = 0.28
+						Atmosphere.Color = Color3.fromRGB(255, 180, 130)
+						Atmosphere.Decay = Color3.fromRGB(130, 80, 50)
+						Atmosphere.Glare = 0.25
+						Atmosphere.Haze = 1.4
+						Atmosphere.Parent = Lighting
+						local BloomEffect = Instance.new("BloomEffect")
+						BloomEffect.Intensity = 1.2
+						BloomEffect.Size = 34
+						BloomEffect.Threshold = 0.85
+						BloomEffect.Enabled = true
+						BloomEffect.Parent = Lighting
+						local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+						ColorCorrectionEffect.Brightness = 0.1
+						ColorCorrectionEffect.Contrast = 0.4
+						ColorCorrectionEffect.Saturation = 0.22
+						ColorCorrectionEffect.TintColor = Color3.fromRGB(255, 190, 130)
+						ColorCorrectionEffect.Enabled = true
+						ColorCorrectionEffect.Parent = Lighting
+						local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+						DepthOfFieldEffect.FarIntensity = 0.28
+						DepthOfFieldEffect.FocusDistance = 0
+						DepthOfFieldEffect.InFocusRadius = 50
+						DepthOfFieldEffect.NearIntensity = 0.7
+						DepthOfFieldEffect.Enabled = true
+						DepthOfFieldEffect.Parent = Lighting
+						local SunRaysEffect = Instance.new("SunRaysEffect")
+						SunRaysEffect.Intensity = 0.5
+						SunRaysEffect.Spread = 1
+						SunRaysEffect.Enabled = true
+						SunRaysEffect.Parent = Lighting
+						if Terrain then
+							local v3 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+							v3.Cover = 0.6
+							v3.Density = 0.32
+							v3.Color = Color3.fromRGB(255, 160, 110)
+							v3.Enabled = true
+							v3.Parent = Terrain
+						end
+					end
+					if v ~= "night" then
+						return
+					end
+					Lighting.Brightness = 0.9
+					Lighting.ClockTime = 23
+					Lighting.Ambient = Color3.fromRGB(60, 60, 80)
+					Lighting.OutdoorAmbient = Color3.fromRGB(40, 40, 60)
+					Lighting.ColorShift_Top = Color3.fromRGB(100, 110, 140)
+					Lighting.ColorShift_Bottom = Color3.fromRGB(60, 70, 100)
+					Lighting.EnvironmentDiffuseScale = 0.7
+					Lighting.EnvironmentSpecularScale = 0.5
+					Lighting.GlobalShadows = true
+					Lighting.ShadowSoftness = 0.6
+					Lighting.ExposureCompensation = 0.6
+					local Atmosphere = Instance.new("Atmosphere")
+					Atmosphere.Density = 0.38
+					Atmosphere.Offset = 0.3
+					Atmosphere.Color = Color3.fromRGB(90, 100, 140)
+					Atmosphere.Decay = Color3.fromRGB(40, 40, 70)
+					Atmosphere.Glare = 0
+					Atmosphere.Haze = 1.4
+					Atmosphere.Parent = Lighting
+					local BloomEffect = Instance.new("BloomEffect")
+					BloomEffect.Intensity = 0.6
+					BloomEffect.Size = 20
+					BloomEffect.Threshold = 1.2
+					BloomEffect.Enabled = true
+					BloomEffect.Parent = Lighting
+					local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+					ColorCorrectionEffect.Brightness = -0.02
+					ColorCorrectionEffect.Contrast = 0.2
+					ColorCorrectionEffect.Saturation = -0.1
+					ColorCorrectionEffect.TintColor = Color3.fromRGB(170, 190, 255)
+					ColorCorrectionEffect.Enabled = true
+					ColorCorrectionEffect.Parent = Lighting
+					local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+					DepthOfFieldEffect.FarIntensity = 0.1
+					DepthOfFieldEffect.FocusDistance = 0
+					DepthOfFieldEffect.InFocusRadius = 70
+					DepthOfFieldEffect.NearIntensity = 0.3
+					DepthOfFieldEffect.Enabled = true
+					DepthOfFieldEffect.Parent = Lighting
+					if not Terrain then
+						return
+					end
+					local v4 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+					v4.Cover = 0.55
+					v4.Density = 0.35
+					v4.Color = Color3.fromRGB(110, 120, 160)
+					v4.Enabled = true
+					v4.Parent = Terrain
+				end)
+			end
+			f14("Water", 5, "rbxassetid://109610956590784")
+			f14("Bloxy Cola", 10, "rbxassetid://86829831784670")
+			f14("Cheese Burger", 10, "rbxassetid://136621222160141")
+			f14("Coffee", 15, "rbxassetid://108031312599299")
+			f14("Orange juice", 15, "rbxassetid://76765486223529")
+			f14("Pizza", 15, "rbxassetid://87167891235912")
+			f14("Chocolate Milk", 15, "rbxassetid://94196615470768")
+			f14("lemon soda", 15, "rbxassetid://132434641141105")
+			f14("cheese", 15, "rbxassetid://135174884131291")
+			f14("Sandwich", 15, "rbxassetid://97984664887469")
+			f14("Cake", 20, "rbxassetid://84751226844376")
+			f14("Taco", 20, "rbxassetid://103810777570747")
+			f14("IceCream Cone", 20, "rbxassetid://132393366360415")
+			f14("Apple", 25, "rbxassetid://120514065532109")
+			f14("toy", 25, "rbxassetid://137399983277723")
+			if v11.month == 10 then
+				f14("Candy Bucket", 40, "rbxassetid://105581405388990", Color3.fromRGB(255, 170, 0))
+				f14("Ghost Burger", 70, "rbxassetid://140293414930127", Color3.fromRGB(255, 170, 0))
+			elseif v11.month == 12 then
+				f14("Candy Cane", 35, "rbxassetid://98224870518086", Color3.fromRGB(0, 255, 0))
+				f14("Mystery Box", 35, "rbxassetid://130085340832016", Color3.fromRGB(0, 255, 0))
+			else
+				local isMonth_2 = v11.month == 1
+			end
+			f14("crystal", 40, "rbxassetid://73521138600414")
+			_ = function(p1_2) --[[ filterString | Line: 1283 ]]
+				return string.sub(p1_2, 1, 2) .. string.rep("#", (math.max(0, #p1_2 - 2)))
+			end
+			v7.OnClientEvent:Connect(function(p1_2) --[[ Line: 1291 | Upvalues: v3 (copy), scroll (copy), fn (copy), Players (copy) ]]
+				for i2, v in ipairs(p1_2) do
+					task.spawn(function() --[[ Line: 1293 | Upvalues: v3 (ref), scroll (ref), v (copy), i2 (copy), fn (ref), Players (ref) ]]
+						local v1 = v3:Clone()
+						v1.Parent = scroll
+						local v2, _ = pcall(function() --[[ Line: 1296 | Upvalues: v (ref), v1 (copy), i2 (ref) ]]
+							v1.name.Text = "#" .. i2 .. " " .. v.name
+						end)
+						if not v2 then
+							v1.name.Text = "error"
+						end
+						v1.minute.Text = fn(v.minutes) .. " minutes"
+						v1.icon.Image = Players:GetUserThumbnailAsync(v.id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+					end)
+					task.wait(0.2)
+				end
+			end)
+			return
+		end
+	end
+end
+if LocalPlayer_2:FindFirstChild("stat") then
+	v21 = LocalPlayer_2:FindFirstChild("stat"):FindFirstChild("box")
+	v22 = f15
+	v23 = "plain box"
+	v24 = function(p1_2) --[[ Line: 721 | Upvalues: v21 (copy) ]]
+		v21.Value = p1_2
+	end
+	v25 = if v21 then v21.Value or false else false
+	f15(v23, v24, v25)
+end
+if LocalPlayer_2:FindFirstChild("leaderstats") then
+	v26 = LocalPlayer_2.leaderstats:FindFirstChild("Minutes")
+	if v26 and v26.Value >= 1000 then
+		v27 = LocalPlayer_2:WaitForChild("stat", 5):FindFirstChild("tags")
+		v28 = f15
+		v29 = "hide own tags"
+		v30 = function(p1_2) --[[ Line: 731 | Upvalues: v8 (copy) ]]
+			v8:FireServer("tags")
+		end
+		v31 = if v27 then v27.Value or false else false
+		f15(v29, v30, v31)
+	end
+end
+v32 = game:GetService("Workspace").Baseplate
+v33 = f16("baseplate")
+for k2, v in pairs({ "default studs", "grass", "snow", "green studs", "blue studs", "sand", "wood" }) do
+	v33:add(v, function() --[[ Line: 744 | Upvalues: v (copy), v32 (copy) ]]
+		if v == "default studs" then
+			v32.Material = Enum.Material.Plastic
+			v32.Color = Color3.fromRGB(99, 95, 98)
+		end
+		if v == "grass" then
+			v32.Material = Enum.Material.Grass
+			v32.Color = Color3.fromRGB(0, 126, 4)
+		end
+		if v == "snow" then
+			v32.Material = Enum.Material.Snow
+			v32.Color = Color3.fromRGB(176, 176, 176)
+		end
+		if v == "green studs" then
+			v32.Material = Enum.Material.Plastic
+			v32.Color = Color3.fromRGB(75, 151, 75)
+		end
+		if v == "blue studs" then
+			v32.Material = Enum.Material.Plastic
+			v32.Color = Color3.fromRGB(0, 85, 255)
+		end
+		if v == "wood" then
+			v32.Material = Enum.Material.Wood
+			v32.Color = Color3.fromRGB(121, 113, 74)
+		end
+		if v ~= "sand" then
+			return
+		end
+		v32.Material = Enum.Material.Sand
+		v32.Color = Color3.fromRGB(217, 211, 134)
+	end)
+end
+v34 = f16("lighting")
+for k2, v in pairs({ "default", "morning", "afternoon", "evening", "night" }) do
+	v34:add(v, function() --[[ Line: 975 | Upvalues: v (copy) ]]
+		local Lighting = game:GetService("Lighting")
+		for k2, v3 in pairs(Lighting:GetChildren()) do
+			if v3:IsA("Atmosphere") or (v3:IsA("BloomEffect") or (v3:IsA("ColorCorrectionEffect") or (v3:IsA("DepthOfFieldEffect") or v3:IsA("SunRaysEffect")))) then
+				v3:Destroy()
+			end
+		end
+		local Terrain = workspace:FindFirstChildOfClass("Terrain")
+		if Terrain then
+			local Clouds = Terrain:FindFirstChildOfClass("Clouds")
+			if Clouds then
+				Clouds:Destroy()
+			end
+		end
+		if v == "default" then
+			Lighting.Brightness = 2
+			Lighting.ClockTime = 14
+			Lighting.Ambient = Color3.fromRGB(138, 138, 138)
+			Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+			Lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+			Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+			Lighting.EnvironmentDiffuseScale = 0
+			Lighting.EnvironmentSpecularScale = 0
+			Lighting.GlobalShadows = true
+			Lighting.ShadowSoftness = 0.5
+			Lighting.ExposureCompensation = 0
+		end
+		if v == "morning" then
+			Lighting.Brightness = 1.9
+			Lighting.ClockTime = 6.5
+			Lighting.Ambient = Color3.fromRGB(102, 107, 200)
+			Lighting.OutdoorAmbient = Color3.fromRGB(120, 173, 230)
+			Lighting.ColorShift_Top = Color3.fromRGB(255, 240, 210)
+			Lighting.ColorShift_Bottom = Color3.fromRGB(200, 220, 255)
+			Lighting.EnvironmentDiffuseScale = 1.2
+			Lighting.EnvironmentSpecularScale = 1
+			Lighting.GlobalShadows = true
+			Lighting.ShadowSoftness = 0.5
+			Lighting.ExposureCompensation = 0.2
+			local Atmosphere = Instance.new("Atmosphere")
+			Atmosphere.Density = 0.32
+			Atmosphere.Offset = 0.18
+			Atmosphere.Color = Color3.fromRGB(255, 240, 220)
+			Atmosphere.Decay = Color3.fromRGB(170, 200, 255)
+			Atmosphere.Glare = 0.18
+			Atmosphere.Haze = 1
+			Atmosphere.Parent = Lighting
+			local BloomEffect = Instance.new("BloomEffect")
+			BloomEffect.Intensity = 0.95
+			BloomEffect.Size = 30
+			BloomEffect.Threshold = 0.95
+			BloomEffect.Enabled = true
+			BloomEffect.Parent = Lighting
+			local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+			ColorCorrectionEffect.Brightness = 0.15
+			ColorCorrectionEffect.Contrast = 0.28
+			ColorCorrectionEffect.Saturation = 0.18
+			ColorCorrectionEffect.TintColor = Color3.fromRGB(220, 240, 255)
+			ColorCorrectionEffect.Enabled = true
+			ColorCorrectionEffect.Parent = Lighting
+			local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+			DepthOfFieldEffect.FarIntensity = 0.15
+			DepthOfFieldEffect.FocusDistance = 0
+			DepthOfFieldEffect.InFocusRadius = 55
+			DepthOfFieldEffect.NearIntensity = 0.45
+			DepthOfFieldEffect.Enabled = true
+			DepthOfFieldEffect.Parent = Lighting
+			local SunRaysEffect = Instance.new("SunRaysEffect")
+			SunRaysEffect.Intensity = 0.34
+			SunRaysEffect.Spread = 0.75
+			SunRaysEffect.Enabled = true
+			SunRaysEffect.Parent = Lighting
+			if Terrain then
+				local v1 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+				v1.Cover = 0.75
+				v1.Density = 0.28
+				v1.Color = Color3.fromRGB(172, 197, 255)
+				v1.Enabled = true
+				v1.Parent = Terrain
+			end
+		end
+		if v == "afternoon" then
+			Lighting.Brightness = 2
+			Lighting.ClockTime = 13.5
+			Lighting.Ambient = Color3.fromRGB(180, 160, 140)
+			Lighting.OutdoorAmbient = Color3.fromRGB(220, 200, 160)
+			Lighting.ColorShift_Top = Color3.fromRGB(255, 255, 255)
+			Lighting.ColorShift_Bottom = Color3.fromRGB(210, 190, 160)
+			Lighting.EnvironmentDiffuseScale = 1.1
+			Lighting.EnvironmentSpecularScale = 1
+			Lighting.GlobalShadows = true
+			Lighting.ShadowSoftness = 0.45
+			Lighting.ExposureCompensation = 0.34
+			local Atmosphere = Instance.new("Atmosphere")
+			Atmosphere.Density = 0.28
+			Atmosphere.Offset = 0.18
+			Atmosphere.Color = Color3.fromRGB(235, 235, 235)
+			Atmosphere.Decay = Color3.fromRGB(200, 170, 130)
+			Atmosphere.Glare = 0.22
+			Atmosphere.Haze = 0.9
+			Atmosphere.Parent = Lighting
+			local BloomEffect = Instance.new("BloomEffect")
+			BloomEffect.Intensity = 1
+			BloomEffect.Size = 32
+			BloomEffect.Threshold = 0.95
+			BloomEffect.Enabled = true
+			BloomEffect.Parent = Lighting
+			local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+			ColorCorrectionEffect.Brightness = 0.14
+			ColorCorrectionEffect.Contrast = 0.28
+			ColorCorrectionEffect.Saturation = 0.18
+			ColorCorrectionEffect.TintColor = Color3.fromRGB(255, 230, 200)
+			ColorCorrectionEffect.Enabled = true
+			ColorCorrectionEffect.Parent = Lighting
+			local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+			DepthOfFieldEffect.FarIntensity = 0.12
+			DepthOfFieldEffect.FocusDistance = 0
+			DepthOfFieldEffect.InFocusRadius = 65
+			DepthOfFieldEffect.NearIntensity = 0.4
+			DepthOfFieldEffect.Enabled = true
+			DepthOfFieldEffect.Parent = Lighting
+			local SunRaysEffect = Instance.new("SunRaysEffect")
+			SunRaysEffect.Intensity = 0.38
+			SunRaysEffect.Spread = 0.88
+			SunRaysEffect.Enabled = true
+			SunRaysEffect.Parent = Lighting
+			if Terrain then
+				local v2 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+				v2.Cover = 0.4
+				v2.Density = 0.22
+				v2.Color = Color3.fromRGB(255, 240, 210)
+				v2.Enabled = true
+				v2.Parent = Terrain
+			end
+		end
+		if v == "evening" then
+			Lighting.Brightness = 1.6
+			Lighting.ClockTime = 17.6
+			Lighting.Ambient = Color3.fromRGB(140, 90, 70)
+			Lighting.OutdoorAmbient = Color3.fromRGB(200, 100, 60)
+			Lighting.ColorShift_Top = Color3.fromRGB(255, 150, 100)
+			Lighting.ColorShift_Bottom = Color3.fromRGB(120, 70, 50)
+			Lighting.EnvironmentDiffuseScale = 1
+			Lighting.EnvironmentSpecularScale = 0.9
+			Lighting.GlobalShadows = true
+			Lighting.ShadowSoftness = 0.4
+			Lighting.ExposureCompensation = 0.15
+			local Atmosphere = Instance.new("Atmosphere")
+			Atmosphere.Density = 0.45
+			Atmosphere.Offset = 0.28
+			Atmosphere.Color = Color3.fromRGB(255, 180, 130)
+			Atmosphere.Decay = Color3.fromRGB(130, 80, 50)
+			Atmosphere.Glare = 0.25
+			Atmosphere.Haze = 1.4
+			Atmosphere.Parent = Lighting
+			local BloomEffect = Instance.new("BloomEffect")
+			BloomEffect.Intensity = 1.2
+			BloomEffect.Size = 34
+			BloomEffect.Threshold = 0.85
+			BloomEffect.Enabled = true
+			BloomEffect.Parent = Lighting
+			local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+			ColorCorrectionEffect.Brightness = 0.1
+			ColorCorrectionEffect.Contrast = 0.4
+			ColorCorrectionEffect.Saturation = 0.22
+			ColorCorrectionEffect.TintColor = Color3.fromRGB(255, 190, 130)
+			ColorCorrectionEffect.Enabled = true
+			ColorCorrectionEffect.Parent = Lighting
+			local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+			DepthOfFieldEffect.FarIntensity = 0.28
+			DepthOfFieldEffect.FocusDistance = 0
+			DepthOfFieldEffect.InFocusRadius = 50
+			DepthOfFieldEffect.NearIntensity = 0.7
+			DepthOfFieldEffect.Enabled = true
+			DepthOfFieldEffect.Parent = Lighting
+			local SunRaysEffect = Instance.new("SunRaysEffect")
+			SunRaysEffect.Intensity = 0.5
+			SunRaysEffect.Spread = 1
+			SunRaysEffect.Enabled = true
+			SunRaysEffect.Parent = Lighting
+			if Terrain then
+				local v3 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+				v3.Cover = 0.6
+				v3.Density = 0.32
+				v3.Color = Color3.fromRGB(255, 160, 110)
+				v3.Enabled = true
+				v3.Parent = Terrain
+			end
+		end
+		if v ~= "night" then
+			return
+		end
+		Lighting.Brightness = 0.9
+		Lighting.ClockTime = 23
+		Lighting.Ambient = Color3.fromRGB(60, 60, 80)
+		Lighting.OutdoorAmbient = Color3.fromRGB(40, 40, 60)
+		Lighting.ColorShift_Top = Color3.fromRGB(100, 110, 140)
+		Lighting.ColorShift_Bottom = Color3.fromRGB(60, 70, 100)
+		Lighting.EnvironmentDiffuseScale = 0.7
+		Lighting.EnvironmentSpecularScale = 0.5
+		Lighting.GlobalShadows = true
+		Lighting.ShadowSoftness = 0.6
+		Lighting.ExposureCompensation = 0.6
+		local Atmosphere = Instance.new("Atmosphere")
+		Atmosphere.Density = 0.38
+		Atmosphere.Offset = 0.3
+		Atmosphere.Color = Color3.fromRGB(90, 100, 140)
+		Atmosphere.Decay = Color3.fromRGB(40, 40, 70)
+		Atmosphere.Glare = 0
+		Atmosphere.Haze = 1.4
+		Atmosphere.Parent = Lighting
+		local BloomEffect = Instance.new("BloomEffect")
+		BloomEffect.Intensity = 0.6
+		BloomEffect.Size = 20
+		BloomEffect.Threshold = 1.2
+		BloomEffect.Enabled = true
+		BloomEffect.Parent = Lighting
+		local ColorCorrectionEffect = Instance.new("ColorCorrectionEffect")
+		ColorCorrectionEffect.Brightness = -0.02
+		ColorCorrectionEffect.Contrast = 0.2
+		ColorCorrectionEffect.Saturation = -0.1
+		ColorCorrectionEffect.TintColor = Color3.fromRGB(170, 190, 255)
+		ColorCorrectionEffect.Enabled = true
+		ColorCorrectionEffect.Parent = Lighting
+		local DepthOfFieldEffect = Instance.new("DepthOfFieldEffect")
+		DepthOfFieldEffect.FarIntensity = 0.1
+		DepthOfFieldEffect.FocusDistance = 0
+		DepthOfFieldEffect.InFocusRadius = 70
+		DepthOfFieldEffect.NearIntensity = 0.3
+		DepthOfFieldEffect.Enabled = true
+		DepthOfFieldEffect.Parent = Lighting
+		if not Terrain then
+			return
+		end
+		local v4 = Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+		v4.Cover = 0.55
+		v4.Density = 0.35
+		v4.Color = Color3.fromRGB(110, 120, 160)
+		v4.Enabled = true
+		v4.Parent = Terrain
+	end)
+end
+f14("Water", 5, "rbxassetid://109610956590784")
+f14("Bloxy Cola", 10, "rbxassetid://86829831784670")
+f14("Cheese Burger", 10, "rbxassetid://136621222160141")
+f14("Coffee", 15, "rbxassetid://108031312599299")
+f14("Orange juice", 15, "rbxassetid://76765486223529")
+f14("Pizza", 15, "rbxassetid://87167891235912")
+f14("Chocolate Milk", 15, "rbxassetid://94196615470768")
+f14("lemon soda", 15, "rbxassetid://132434641141105")
+f14("cheese", 15, "rbxassetid://135174884131291")
+f14("Sandwich", 15, "rbxassetid://97984664887469")
+f14("Cake", 20, "rbxassetid://84751226844376")
+f14("Taco", 20, "rbxassetid://103810777570747")
+f14("IceCream Cone", 20, "rbxassetid://132393366360415")
+f14("Apple", 25, "rbxassetid://120514065532109")
+f14("toy", 25, "rbxassetid://137399983277723")
+if v11.month == 10 then
+	f14("Candy Bucket", 40, "rbxassetid://105581405388990", Color3.fromRGB(255, 170, 0))
+	f14("Ghost Burger", 70, "rbxassetid://140293414930127", Color3.fromRGB(255, 170, 0))
+elseif v11.month == 12 then
+	f14("Candy Cane", 35, "rbxassetid://98224870518086", Color3.fromRGB(0, 255, 0))
+	f14("Mystery Box", 35, "rbxassetid://130085340832016", Color3.fromRGB(0, 255, 0))
+else
+	local isMonth_2 = v11.month == 1
+end
+f14("crystal", 40, "rbxassetid://73521138600414")
+_ = function(p1_2) --[[ filterString | Line: 1283 ]]
+	return string.sub(p1_2, 1, 2) .. string.rep("#", (math.max(0, #p1_2 - 2)))
+end
+v7.OnClientEvent:Connect(function(p1_2) --[[ Line: 1291 | Upvalues: v3 (copy), scroll (copy), fn (copy), Players (copy) ]]
+	for i2, v in ipairs(p1_2) do
+		task.spawn(function() --[[ Line: 1293 | Upvalues: v3 (ref), scroll (ref), v (copy), i2 (copy), fn (ref), Players (ref) ]]
+			local v1 = v3:Clone()
+			v1.Parent = scroll
+			local v2, _ = pcall(function() --[[ Line: 1296 | Upvalues: v (ref), v1 (copy), i2 (ref) ]]
+				v1.name.Text = "#" .. i2 .. " " .. v.name
+			end)
+			if not v2 then
+				v1.name.Text = "error"
+			end
+			v1.minute.Text = fn(v.minutes) .. " minutes"
+			v1.icon.Image = Players:GetUserThumbnailAsync(v.id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+		end)
+		task.wait(0.2)
+	end
+end)
