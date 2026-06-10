@@ -1,0 +1,359 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local lp = Players.LocalPlayer
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local BuyTrail = Remotes:WaitForChild("BuyTrail")
+local EquipTrail = Remotes:WaitForChild("EquipTrail")
+local ClientState = require(ReplicatedStorage:WaitForChild("ClientState"))
+local Config = require(ReplicatedStorage:WaitForChild("Config"))
+
+local flags = {
+    autoWin = false,
+    autoRebirth = false,
+    autoTreadmill = false,
+    noclip = false,
+    speed = 16,
+}
+
+local TRAILS = {
+    { Name = "GreenTrail",     Multiplier = 1.5,     Price = 500 },
+    { Name = "BlueTrail",      Multiplier = 2,       Price = 1500 },
+    { Name = "PurpleTrail",    Multiplier = 3,       Price = 5000 },
+    { Name = "RedTrail",       Multiplier = 4,       Price = 25000 },
+    { Name = "RainbowTrail",   Multiplier = 5,       Price = 100000 },
+    { Name = "GalaxyTrail",    Multiplier = 10,      Price = 0 },
+    { Name = "CosmicTrail",    Multiplier = 100,     Price = 5000000 },
+    { Name = "VoidTrail",      Multiplier = 1000,    Price = 50000000 },
+    { Name = "SupernovaTrail", Multiplier = 10000,   Price = 500000000 },
+    { Name = "GodlikeTrail",   Multiplier = 100000,  Price = 5000000000 },
+    { Name = "InfinityTrail",  Multiplier = 5000000, Price = 0 },
+}
+
+local FREE_TRAILS = {"InfinityTrail", "GalaxyTrail"}
+
+local GAMEPASS_IDS = {
+    CANDY_ACCESS     = 1799448573,
+    ADMIN_ACCESS     = 1799430547,
+    GOLD_ACCESS      = 1674743386,
+    WINS_X2          = 1675021026,
+    DIAMOND_ACCESS   = 1724758929,
+    SOUNDPACK_ACCESS = 1724877043,
+}
+
+local MAX_SPEED_ALLOWED = 250
+local RebirthRemote = Remotes:FindFirstChild("RequestRebirth")
+    or Remotes:FindFirstChild("Rebirth")
+    or Remotes:FindFirstChild("DoRebirth")
+
+local function notify(msg)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "SpeedHub",
+        Text = msg,
+        Duration = 3,
+    })
+end
+
+local function getTrail(name)
+    local ok, res = pcall(function()
+        return BuyTrail:InvokeServer(name, "Wins")
+    end)
+    if ok then
+        task.wait(0.4)
+        pcall(function() EquipTrail:FireServer(name) end)
+    else
+        warn("Failed: " .. tostring(res))
+    end
+end
+
+getTrail("InfinityTrail")
+task.wait(0.6)
+getTrail("GalaxyTrail")
+
+local function doAutoWin()
+    local char = lp.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local winNames = {
+        "WinBlock","WinBlock2","WinBlock3","WinBlock4","WinBlock5",
+        "WinBlock6","WinBlock7","WinBlock8","WinBlock9","WinBlock10",
+        "WinBlock11","WinBlock12","WinBlock13","WinBlock14","WinBlock15"
+    }
+    for _, name in ipairs(winNames) do
+        local block = workspace:FindFirstChild(name, true)
+        if block and block:IsA("BasePart") then
+            root.CFrame = block.CFrame + Vector3.new(0, 5, 0)
+            return
+        end
+    end
+end
+
+local function doAutoTreadmill()
+    local char = lp.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name:lower():find("treadmill") then
+            root.CFrame = obj.CFrame + Vector3.new(0, 4, 0)
+            return
+        end
+    end
+end
+
+local function doAutoRebirth()
+    if not RebirthRemote then return end
+    local data = ClientState:Get()
+    local lvl = data.Level or 0
+    local tiers = Config.REBIRTH_TIERS or {}
+    for _, tier in ipairs(tiers) do
+        if lvl >= tier.level then
+            pcall(function() RebirthRemote:FireServer() end)
+            return
+        end
+    end
+end
+
+RunService.Stepped:Connect(function()
+    if not flags.noclip then return end
+    local char = lp.Character
+    if not char then return end
+    for _, p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = false
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local char = lp.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = flags.speed
+    end
+    if flags.autoWin then doAutoWin() end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if flags.autoTreadmill then doAutoTreadmill() end
+        if flags.autoRebirth then doAutoRebirth() end
+    end
+end)
+
+lp.CharacterAdded:Connect(function() end)
+
+local old = lp.PlayerGui:FindFirstChild("SKEHub")
+if old then old:Destroy() end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SKEHub"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = lp.PlayerGui
+
+local win = Instance.new("Frame")
+win.Name = "Win"
+win.Size = UDim2.new(0, 280, 0, 0)
+win.Position = UDim2.new(0, 14, 0.5, -200)
+win.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+win.BorderSizePixel = 0
+win.AutomaticSize = Enum.AutomaticSize.Y
+win.Active = true
+win.Draggable = true
+win.Parent = gui
+Instance.new("UICorner", win).CornerRadius = UDim.new(0, 8)
+
+local stroke = Instance.new("UIStroke", win)
+stroke.Color = Color3.fromRGB(120, 60, 255)
+stroke.Thickness = 1.5
+
+local pad = Instance.new("UIPadding", win)
+pad.PaddingTop = UDim.new(0, 8)
+pad.PaddingBottom = UDim.new(0, 10)
+pad.PaddingLeft = UDim.new(0, 8)
+pad.PaddingRight = UDim.new(0, 8)
+
+local layout = Instance.new("UIListLayout", win)
+layout.Padding = UDim.new(0, 5)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.FillDirection = Enum.FillDirection.Vertical
+
+local order = 0
+
+local titleLbl = Instance.new("TextLabel")
+titleLbl.Size = UDim2.new(1, 0, 0, 30)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Text = "⚡  Speed Keyboard Hub"
+titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLbl.TextSize = 15
+titleLbl.Font = Enum.Font.GothamBold
+titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+titleLbl.LayoutOrder = order
+titleLbl.Parent = win
+order += 1
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, 0, 0, 1)
+divider.BackgroundColor3 = Color3.fromRGB(120, 60, 255)
+divider.BorderSizePixel = 0
+divider.LayoutOrder = order
+divider.Parent = win
+order += 1
+
+local function section(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(120, 60, 255)
+    lbl.TextSize = 11
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = order
+    lbl.Parent = win
+    order += 1
+end
+
+local function toggle(label, flag)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 34)
+    btn.BackgroundColor3 = Color3.fromRGB(22, 22, 36)
+    btn.BorderSizePixel = 0
+    btn.TextColor3 = Color3.fromRGB(190, 190, 190)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 13
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = "  ○  " .. label
+    btn.LayoutOrder = order
+    btn.Parent = win
+    order += 1
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(function()
+        flags[flag] = not flags[flag]
+        local on = flags[flag]
+        btn.Text = on and ("  ●  " .. label) or ("  ○  " .. label)
+        btn.TextColor3 = on and Color3.fromRGB(160, 100, 255) or Color3.fromRGB(190, 190, 190)
+        btn.BackgroundColor3 = on and Color3.fromRGB(35, 18, 70) or Color3.fromRGB(22, 22, 36)
+    end)
+    return btn
+end
+
+local function action(label, fn)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 34)
+    btn.BackgroundColor3 = Color3.fromRGB(90, 40, 210)
+    btn.BorderSizePixel = 0
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 13
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = "  ▶  " .. label
+    btn.LayoutOrder = order
+    btn.AutoButtonColor = false
+    btn.Parent = win
+    order += 1
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(120, 60, 255)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(90, 40, 210)}):Play()
+    end)
+    btn.MouseButton1Click:Connect(fn)
+    return btn
+end
+
+local function speedRow()
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 34)
+    frame.BackgroundTransparency = 1
+    frame.LayoutOrder = order
+    frame.Parent = win
+    order += 1
+
+    local rowLayout = Instance.new("UIListLayout", frame)
+    rowLayout.FillDirection = Enum.FillDirection.Horizontal
+    rowLayout.Padding = UDim.new(0, 6)
+
+    local speedLbl = Instance.new("TextLabel")
+    speedLbl.Size = UDim2.new(0.5, -3, 1, 0)
+    speedLbl.BackgroundColor3 = Color3.fromRGB(22, 22, 36)
+    speedLbl.BorderSizePixel = 0
+    speedLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    speedLbl.Font = Enum.Font.GothamSemibold
+    speedLbl.TextSize = 12
+    speedLbl.Text = "Speed: " .. flags.speed
+    speedLbl.Parent = frame
+    Instance.new("UICorner", speedLbl).CornerRadius = UDim.new(0, 6)
+
+    local function mkBtn(txt, delta)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(0.25, -3, 1, 0)
+        b.BackgroundColor3 = Color3.fromRGB(90, 40, 210)
+        b.BorderSizePixel = 0
+        b.TextColor3 = Color3.fromRGB(255, 255, 255)
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 14
+        b.Text = txt
+        b.Parent = frame
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+        b.MouseButton1Click:Connect(function()
+            flags.speed = math.clamp(flags.speed + delta, 16, MAX_SPEED_ALLOWED)
+            speedLbl.Text = "Speed: " .. flags.speed
+        end)
+    end
+    mkBtn("-", -10)
+    mkBtn("+", 10)
+end
+
+section("FREE TRAILS")
+action("Get InfinityTrail [5,000,000x]", function() getTrail("InfinityTrail") end)
+action("Get GalaxyTrail [10x]",          function() getTrail("GalaxyTrail") end)
+action("Get Both + Equip Infinity",      function()
+    getTrail("InfinityTrail")
+    task.wait(0.6)
+    getTrail("GalaxyTrail")
+end)
+
+section("EQUIP TRAILS")
+for _, trail in ipairs(TRAILS) do
+    local n = trail.Name
+    action("Equip " .. n .. " (" .. tostring(trail.Multiplier) .. "x)", function()
+        pcall(function() EquipTrail:FireServer(n) end)
+    end)
+end
+
+section("AUTO FARM")
+toggle("Auto Win",       "autoWin")
+toggle("Auto Treadmill", "autoTreadmill")
+toggle("Auto Rebirth",   "autoRebirth")
+
+section("PLAYER")
+toggle("NoClip", "noclip")
+speedRow()
+
+section("GAMEPASS PROMPT")
+for name, id in pairs(GAMEPASS_IDS) do
+    local gid = id
+    action("Prompt: " .. name, function()
+        MarketplaceService:PromptGamePassPurchase(lp, gid)
+    end)
+end
+
+UserInputService.InputBegan:Connect(function(inp, gpe)
+    if gpe then return end
+    if inp.KeyCode == Enum.KeyCode.RightShift then
+        win.Visible = not win.Visible
+    end
+end)
+
+notify("SpeedKeyboard Hub loaded! RightShift to toggle.")
+print("[SKEHub] Loaded | RightShift = toggle GUI")
